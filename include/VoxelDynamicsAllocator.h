@@ -378,6 +378,24 @@ struct VDList : IVDHashable, IVDSortable<VDList<T>>
         return itemLoc;
     }
 
+    T pop()
+    {
+        if (pFirst == nullptr)
+        {
+            throw std::runtime_error("Cannot pop from an empty list.");
+        }
+
+        T item = pFirst->item;
+        VDListData* temp = pFirst;
+        pFirst = pFirst->pNext;
+
+        // Free the memory of the old first node
+        gAllocator.free<VDListData>(temp, 1);
+        count--;
+
+        return item;
+    }
+
     void remove(T item) 
     {
         if (pFirst == nullptr) return;

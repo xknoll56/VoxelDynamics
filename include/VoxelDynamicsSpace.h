@@ -11,7 +11,7 @@ struct VDVoxel
 	VDVector3i offsets;
 	bool occupied;
 	VDVector3 lowPosition;
-	VDPointer pointer;
+	VDPointer userData;
 	VDuint index;
 	VDuint chunkIndex;
 	VDList<VDPointer> colliders;
@@ -21,7 +21,7 @@ struct VDVoxel
 		offsets = VDVector3i();
 		lowPosition = VDVector3();
 		occupied = false;
-		pointer = NULL;
+		userData = NULL;
 		index = -1;
 		colliders = VDList<VDPointer>();
 		chunkIndex = 0;
@@ -32,7 +32,7 @@ struct VDVoxel
 		offsets = _offsets;
 		occupied = _occupied;
 		lowPosition = _lowPosition;
-		pointer = _pointer;
+		userData = _pointer;
 		index = _index;
 		colliders = VDList<VDPointer>();
 		chunkIndex = _chunkIndex;
@@ -46,7 +46,7 @@ struct VDVoxel
 			offsets = other.offsets;
 			occupied = other.occupied;
 			lowPosition = other.lowPosition;
-			pointer = other.pointer;
+			userData = other.userData;
 			index = other.index;
 			colliders = other.colliders;
 			chunkIndex = other.chunkIndex;
@@ -82,8 +82,8 @@ struct VDGrid
 	VDVoxel* voxels;
 	VDVector3 low;
 	VDuint indexCount;
-	VDList<VDVoxel*> occupiedVoxels;
 	VDuint chunkIndex;
+	VDPointer userData;
 
 	VDuint getIndex(VDuint lvx, VDuint lvy, VDuint lvz) const
 	{
@@ -127,7 +127,6 @@ struct VDGrid
 		//aabb = VDAABB(low, low + VDVector3((float)gridSize, (float)gridSize, (float)gridSize));
 		this->low = low;
 		chunkIndex = _chunkIndex;
-		occupiedVoxels = VDList<VDVoxel*>();
 	}
 
 	VDGrid() : VDGrid::VDGrid(25, VDVector3(), 0)
@@ -162,47 +161,47 @@ struct VDGrid
 			return voxels[index].occupied;
 	}
 
-	VDVoxel getVoxel(VDVector3 position)
+	VDVoxel* getVoxel(VDVector3 position)
 	{
 		VDuint index = getIndex(position);
 		if (index < indexCount)
-			return voxels[index];
+			return &voxels[index];
 	}
 
-	VDVoxel getVoxel(VDuint lvx, VDuint lvy, VDuint lvz)
+	VDVoxel* getVoxel(VDuint lvx, VDuint lvy, VDuint lvz)
 	{
 		VDuint index = getIndex(lvx, lvy, lvz);
 		if (index < indexCount)
-			return voxels[index];
+			return &voxels[index];
 	}
 
-	VDVoxel getVoxel(VDuint index)
+	VDVoxel* getVoxel(VDuint index)
 	{
 		if (index < indexCount)
-			return voxels[index];
+			return &voxels[index];
 	}
 
 
 
-	void setOccupied(VDuint index)
+	VDVoxel* setOccupied(VDuint index)
 	{
 		if (index < indexCount && !voxels[index].occupied)
 		{
 			voxels[index].occupied = true;
-			occupiedVoxels.insert(&voxels[index]);
+			return &voxels[index];
 		}
 	}
 
-	void setOccupied(VDVector3 position)
+	VDVoxel* setOccupied(VDVector3 position)
 	{
 		VDuint index = getIndex(position);
-		setOccupied(index);
+		return setOccupied(index);
 	}
 
-	void setOccupied(VDuint lvx, VDuint lvy, VDuint lvz)
+	VDVoxel* setOccupied(VDuint lvx, VDuint lvy, VDuint lvz)
 	{
 		VDuint index = getIndex(lvx, lvy, lvz);
-		setOccupied(index);
+		return setOccupied(index);
 	}
 
 	void setVoxel(VDuint index, VDVoxel voxel)
@@ -377,6 +376,17 @@ struct VDGrid
 		insertCollider(collider, occupiedVoxels);
 	}
 
+	VDList<VDVoxel*> getOccupiedVoxels()
+	{
+		VDList<VDVoxel*> voxelList;
+		for (int i = 0; i < indexCount; i++)
+		{
+			if (voxels[i].occupied)
+				voxelList.insert(&voxels[i]);
+		}
+		return voxelList;
+	}
+
 };
 
 struct VDSpace
@@ -468,8 +478,11 @@ struct VDSpace
 		if (validateChunkCoord(chunkCoord))
 		{
 			VDuint index = getIndex(chunkCoord);
-			grids[index].occupied = true;
-			grids[index].pChunk = new VDGrid(gridSize, getChunkLow(chunkCoord), index);
+			if (!grids[index].occupied)
+			{
+				grids[index].occupied = true;
+				grids[index].pChunk = new VDGrid(gridSize, getChunkLow(chunkCoord), index);
+			}
 		}
 	}
 
@@ -591,7 +604,7 @@ struct VDSpace
 	{
 		VDuint chunkIndex = getIndex(chunkCoord);
 		VDuint chunkMax = horizontalGrids * horizontalGrids * verticalGrids;
-		if (chunkIndex < chunkMax)
+		if (chunkIndex >= chunkMax)
 			return VDVector3i(-1, -1, -1);
 		if(!grids[chunkIndex].occupied)
 			return VDVector3i(-1, -1, -1);
@@ -659,19 +672,57 @@ struct VDSpace
 		return coords;
 	}
 
-	void setVoxelOccupied(VDVector3 worldPosition)
+	bool getValidGridCoords(VDVector3 worldPosition, VDVector3i& gridCoord)
 	{
 		VDVector3 local = worldPosition - anchor;
-		VDVector3i gridCoord = VDVector3i(local) / gridSize;
-		if (validateChunkCoord(gridCoord))
+		if (local.x >= 0.0f && local.y >= 0.0f && local.z >= 0.0f)
+		{
+			VDVector3i _gridCoord = VDVector3i(local) / gridSize;
+			if (validateChunkCoord(_gridCoord))
+			{
+				gridCoord = _gridCoord;
+				return true;
+			}
+		}
+		return false;
+	}
+
+	void setVoxelOccupied(VDVector3 worldPosition)
+	{
+		VDVector3i gridCoord;
+		if (getValidGridCoords(worldPosition, gridCoord))
+		{
+			VDuint index = getIndex(gridCoord);
+			if (!grids[index].occupied)
+				setChunkOccupied(gridCoord);
+			grids[index].pChunk->setOccupied(worldPosition);
+		}
+	}
+
+	VDVoxel* getVoxel(VDVector3 worldPosition)
+	{
+		VDVector3i gridCoord;
+		if (getValidGridCoords(worldPosition, gridCoord))
 		{
 			VDuint index = getIndex(gridCoord);
 			if (grids[index].occupied)
 			{
-				grids[index].pChunk->setOccupied(worldPosition);
-				
+				return grids[index].pChunk->getVoxel(worldPosition);
 			}
 		}
+		return nullptr;
+	}
+
+	VDGrid* getGrid(VDVector3 position)
+	{
+		VDVector3i gridCoord;
+		if (getValidGridCoords(position, gridCoord))
+		{
+			VDuint index = getIndex(gridCoord);
+			if (grids[index].occupied)
+				return grids[index].pChunk;
+		}
+		return nullptr;
 	}
 };
 

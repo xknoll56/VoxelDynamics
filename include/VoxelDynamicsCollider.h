@@ -39,6 +39,49 @@ VDVector3 VDDirectionToVector(VDDirection dir)
 	}
 }
 
+VDDirection VDVectorToDirection(VDVector3 vec)
+{
+	float xDir = VDDot(vec, VDVector3::right());
+	float yDir = VDDot(vec, VDVector3::up());
+	float zDir = VDDot(vec, VDVector3::forward());
+	float absXDir = VDAbs(xDir);
+	float absYDir = VDAbs(yDir);
+	float absZDir = VDAbs(zDir);
+	if (absXDir >= absYDir && absXDir >= absZDir)
+	{
+		if (xDir >= 0.0f)
+		{
+			return VDDirection::RIGHT;
+		}
+		else
+		{
+			return VDDirection::LEFT;
+		}
+	}
+	else if (absYDir >= absZDir)
+	{
+		if (yDir >= 0.0f)
+		{
+			return VDDirection::UP;
+		}
+		else
+		{
+			return VDDirection::DOWN;
+		}
+	}
+	else
+	{
+		if (zDir >= 0.0f)
+		{
+			return VDDirection::FORWARD;
+		}
+		else
+		{
+			return VDDirection::BACK;
+		}
+	}
+}
+
 enum VDColliderType
 {
 	AABB = 0,

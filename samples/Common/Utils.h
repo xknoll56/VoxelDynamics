@@ -10,8 +10,8 @@
 #include "FastNoiseLite.h"
 
 
-VDuint WINDOW_WIDTH = 1024;
-VDuint WINDOW_HEIGHT = 768;
+VDuint WINDOW_WIDTH = 1268;
+VDuint WINDOW_HEIGHT = 724;
 float aspect = (float)WINDOW_WIDTH / WINDOW_HEIGHT;
 
 
@@ -292,10 +292,73 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 struct VoxelRenderResource
 {
     VDuint arrayPos;
+    VDVoxel* pVoxel;
 };
 
 
+struct InstanceBufferData
+{
+    std::vector<VDVector3> instancePositions;
+    std::vector<int> instanceTexts;
+    VDList<VDuint> freeIndices;
 
+    void reserve(VDuint capacity)
+    {
+        instancePositions.reserve(capacity);
+        instanceTexts.reserve(capacity);
+    }
+
+    InstanceBufferData(VDuint capacity)
+    {
+        reserve(capacity);
+    }
+
+    InstanceBufferData()
+    {
+        reserve(20);
+    }
+
+    VDuint insert(VDVector3 position, int textInd)
+    {
+        //First checck if there are any free indices
+        if (freeIndices.count > 0)
+        {
+            VDuint ind = freeIndices.pop();
+            instancePositions[ind] = position;
+            instanceTexts[ind] = textInd;
+            return ind;
+        }
+
+        if (instancePositions.size() >= instancePositions.capacity())
+        {
+            //double the capacity
+            instancePositions.reserve(2 * instancePositions.size());
+            instanceTexts.reserve(2 * instanceTexts.size());
+        }
+        instancePositions.push_back(position);
+        instanceTexts.push_back(textInd);
+        return instancePositions.size() - 1;
+    }
+
+    void insertVoxel(VDVoxel* pVoxel, int textInd = 0)
+    {
+        VDuint ind = insert(pVoxel->lowPosition, textInd);
+        pVoxel->userData.value = ind;
+    }
+
+    void remove(VDuint index)
+    {
+        freeIndices.insert(index);
+        // Set the texture to -2 to signify unnoccupied to the shader
+        instanceTexts[index] = -2;
+    }
+
+    void removeVoxel(VDVoxel* pVoxel)
+    {
+        VDuint index = pVoxel->userData.value;
+        remove(index);
+    }
+};
 
 
 struct InstanceBuffer : VertexBuffer
@@ -303,12 +366,12 @@ struct InstanceBuffer : VertexBuffer
     GLuint instanceVBO;
     GLuint instanceTextsVBO;
     unsigned int numInstances;
-    std::vector<VDVector3> instancePositions;
-    std::vector<int> instanceTexts;
-    std::vector<VoxelRenderResource> voxelResources;
+    VDuint capacity;
+    InstanceBufferData data;
 
 
-    void init(const VertexBuffer& vertBuffer, std::vector<VDVector3> instancePositions, std::vector<int> instanceTexts)
+
+    void init(const VertexBuffer& vertBuffer, std::vector<VDVector3> instancePositions, std::vector<int> instanceTexts, VDuint capacity)
     {
         
         glGenVertexArrays(1, &VertexArrayId);
@@ -353,11 +416,14 @@ struct InstanceBuffer : VertexBuffer
         numVerts = vertBuffer.numVerts;
 
         this->numInstances = instancePositions.size();
+        this->capacity = capacity;
         //glBindVertexArray(0);
         //Create the instance buffer
         glGenBuffers(1, &instanceVBO);
         glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(VDVector3) * instancePositions.size(), instancePositions.data(), GL_DYNAMIC_DRAW);
+        std::vector<VDVector3> dummydata;
+        dummydata.reserve(capacity);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(VDVector3) * capacity, dummydata.data(), GL_DYNAMIC_DRAW);
 
         glEnableVertexAttribArray(3);
         glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
@@ -375,7 +441,9 @@ struct InstanceBuffer : VertexBuffer
 
         glGenBuffers(1, &instanceTextsVBO);
         glBindBuffer(GL_ARRAY_BUFFER, instanceTextsVBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(int) * instanceTexts.size(), instanceTexts.data(), GL_DYNAMIC_DRAW);
+        std::vector<int> dummyindices;
+        dummyindices.reserve(capacity);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(int) * capacity, dummyindices.data(), GL_DYNAMIC_DRAW);
 
         glEnableVertexAttribArray(4);
         glBindBuffer(GL_ARRAY_BUFFER, instanceTextsVBO);
@@ -392,19 +460,27 @@ struct InstanceBuffer : VertexBuffer
         glVertexAttribDivisor(2, 0);
         glVertexAttribDivisor(3, 1);
         glVertexAttribDivisor(4, 1);
-        glBindVertexArray(0);
 
-        this->instancePositions = instancePositions;
-        this->instanceTexts = instanceTexts;
+        data.instancePositions = instancePositions;
+        data.instanceTexts = instanceTexts;
+
+        // Now update the date
+        updateInstanceBuffer();
+
+        glBindVertexArray(0);
     }
 
     void updateInstanceBuffer()
     {
-        glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(VDVector3) * instancePositions.size(), instancePositions.data());
+        numInstances = data.instancePositions.size();
+        if (numInstances < capacity)
+        {
+            glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
+            glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(VDVector3) * data.instancePositions.size(), data.instancePositions.data());
 
-        glBindBuffer(GL_ARRAY_BUFFER, instanceTextsVBO);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(int) * instanceTexts.size(), instanceTexts.data());
+            glBindBuffer(GL_ARRAY_BUFFER, instanceTextsVBO);
+            glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(int) * data.instanceTexts.size(), data.instanceTexts.data());
+        }
     }
 
     int getTextIndValueAtIndex(VDuint index)
@@ -425,11 +501,11 @@ struct InstanceBuffer : VertexBuffer
 
     void updateInstanceBufferAtIndex(VDuint index, VDVector3 position, int texInd)
     {
-        instancePositions[index] = position;
+        data.instancePositions[index] = position;
         glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
         glBufferSubData(GL_ARRAY_BUFFER, index*sizeof(VDVector3), sizeof(VDVector3), &position);
 
-        instanceTexts[index] = texInd;
+        data.instanceTexts[index] = texInd;
         glBindBuffer(GL_ARRAY_BUFFER, instanceTextsVBO);
         glBufferSubData(GL_ARRAY_BUFFER, index*sizeof(int), sizeof(int), &texInd);
     }
@@ -447,24 +523,23 @@ struct InstanceBuffer : VertexBuffer
         glDrawArraysInstanced(GL_TRIANGLES, 0, numVerts, numInstances);
     }
 
-    static InstanceBuffer instanceBufferFromChunk(VDGrid& chunk)
+    static InstanceBuffer instanceBufferFromChunk(VDGrid& chunk, VDuint capacity)
     {
         std::vector<int> texts;
-        std::vector<VDVoxel*> occupiedVector = chunk.occupiedVoxels.toVector();
+        VDList<VDVoxel*> voxelList = chunk.getOccupiedVoxels();
+        voxelList.autoFree = true;
+        std::vector<VDVoxel*> occupiedVector = voxelList.toVector();
         std::vector<VDVector3> posesVec;
         
         InstanceBuffer ib;
-        ib.voxelResources.reserve(occupiedVector.size());
         for (int i = 0; i < occupiedVector.size(); i++)
         {
             posesVec.push_back(occupiedVector[i]->lowPosition);
             texts.push_back(0);
-            ib.voxelResources.push_back(VoxelRenderResource());
-            ib.voxelResources[i].arrayPos = i;
-            occupiedVector[i]->pointer = (VDPointer)&ib.voxelResources[i];
+            occupiedVector[i]->userData = (VDPointer)i;
             chunk.setVoxel(occupiedVector[i]->index, *occupiedVector[i]);
         }
-        ib.init(vbPositiveQuadrant, posesVec, texts);
+        ib.init(vbPositiveQuadrant, posesVec, texts, capacity);
         return ib;
     }
 
@@ -501,6 +576,47 @@ struct TextureArray
             // Free the image memory
             stbi_image_free(data);
         }
+
+        // Set texture parameters
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+        // Bind the texture array to a texture unit
+        this->textureUnit = textureUnit;
+        glActiveTexture(textureUnit);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, textureArray);
+    }
+
+    void initCheckersTexture(GLuint textureUnit, int width = 4, int height = 4, int checkerSize = 16)
+    {
+        // Create the texture array
+        glGenTextures(1, &textureArray);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, textureArray);
+
+        // Generate the checkers pattern
+        int w = width * checkerSize;
+        int h = height * checkerSize;
+        std::vector<unsigned char> data(w * h * 4);
+
+        for (int y = 0; y < h; ++y) {
+            for (int x = 0; x < w; ++x) {
+                int checkerX = x / checkerSize;
+                int checkerY = y / checkerSize;
+                bool isWhite = (checkerX + checkerY) % 2 == 0;
+
+                int index = (y * w + x) * 4;
+                data[index] = isWhite ? 255 : 0;     // Red
+                data[index + 1] = isWhite ? 255 : 0; // Green
+                data[index + 2] = isWhite ? 255 : 0; // Blue
+                data[index + 3] = 255;               // Alpha
+            }
+        }
+
+        // Allocate storage and upload the texture
+        glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, w, h, 1);
+        glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0, w, h, 1, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
 
         // Set texture parameters
         glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -724,6 +840,16 @@ void drawInstanceBuffer(const InstanceBuffer& instanceBuffer, const TextureArray
     instanceBuffer.draw();
 }
 
+void drawInstanceBuffer(const InstanceBuffer& instanceBuffer, VDVector3 color)
+{
+    instancedShader.use();
+    instancedShader.setUniformInt("textureArray", 0);
+    instancedShader.setUniformVector3("solidColor", color);
+    instancedShader.setUniformMatrix4("mvp", viewProjection);
+    instanceBuffer.bind();
+    instanceBuffer.draw();
+}
+
 void serializeChunk(VDGrid& chunk, std::string outPath)
 {
     std::ofstream outputFile(outPath);
@@ -845,6 +971,7 @@ struct Scene
     {
         camera = Camera(VDVector3(0, 2, -6));
         camera.cameraSpeed = 3.0f;
+        camera.controls.setWASD();
     }
     Camera camera;
     virtual void init() = 0;

@@ -69,7 +69,7 @@ struct VDSimulation
 			VDVector3i newVoxCoord = space.moveIndex(voxelListData->item->index, chunkCoords, minDirection);
 			bool valid = space.validateChunkCoord(chunkCoords) && space.grids[chunkIndex].pChunk->validateCoords(newVoxCoord);
 			VDuint newVoxIndex = space.grids[chunkIndex].pChunk->getIndex(newVoxCoord);
-			bool occupied = valid && space.grids[chunkIndex].pChunk->getOccupied(newVoxIndex);
+			bool occupied = !valid && space.grids[chunkIndex].pChunk->getOccupied(newVoxIndex);
 			bool allOccupied = false;
 			if (occupied)
 			{
@@ -77,7 +77,7 @@ struct VDSimulation
 				newVoxCoord = space.moveIndex(voxelListData->item->index, chunkCoords, minDirection);
 				valid = space.validateChunkCoord(chunkCoords) && space.grids[chunkIndex].pChunk->validateCoords(newVoxCoord);
 				newVoxIndex = space.grids[chunkIndex].pChunk->getIndex(newVoxCoord);
-				occupied = valid && space.grids[chunkIndex].pChunk->getOccupied(newVoxIndex);
+				occupied = !valid && space.grids[chunkIndex].pChunk->getOccupied(newVoxIndex);
 				if (occupied)
 				{
 					allOccupied = true;

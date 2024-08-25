@@ -18,7 +18,7 @@ void main()
 	diffuse = max(diffuse, 0.4f);
 	vec4 baseColor; 
 	if(texInd == -1)
-		baseColor = vec4(0,1,0,1);
+		baseColor = vec4(solidColor,1.0f);
 	else
 		baseColor = texture(textureArray, vec3(uv, texInd));
 	color = vec4(baseColor.x*diffuse, baseColor.y*diffuse, baseColor.z*diffuse, baseColor.w);

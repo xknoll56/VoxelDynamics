@@ -13,9 +13,12 @@ flat out int texInd;
 
 uniform mat4 mvp;
 
-void main(){
-
-    gl_Position = mvp * vec4(vertPos+instancePos.xyz,1);
+void main()
+{
+    if(instanceTex == -2)
+        gl_Position = vec4(0,0,0,0);
+    else
+        gl_Position = mvp * vec4(vertPos+instancePos.xyz,1);
     normal = vertNorm;
     uv = vertUv;
     texInd = instanceTex;
