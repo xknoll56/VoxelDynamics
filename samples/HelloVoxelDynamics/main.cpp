@@ -8,6 +8,7 @@ struct HelloVoxelDynamicsScene : Scene
     std::vector<InstanceBuffer> ibs;
     void init() override
     {
+        texArr.initCheckersTexture(0);
         sim = VDSimulation(20, { -20,-20,-20 }, 2, 2);
         for (int i = -10; i <= 10; i++)
         {

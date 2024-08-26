@@ -115,7 +115,7 @@ struct VDSimulation
 				agent.resolveAABBContact(contact);
 				if (contact.minDirections[0] == VDDirection::UP)
 				{
-					agent.velocity.y = 0.0f;
+					agent.momentum.y = 0.0f;
 					agent.isGrounded = true;
 				}
 			}
@@ -129,7 +129,7 @@ struct VDSimulation
 		}
 		if (field.maxPenetrations[VDDirection::UP] > 0.0f)
 		{
-			agent.velocity.y = 0.0f;
+			agent.momentum.y = 0.0f;
 			agent.isGrounded = true;
 		}
 	}
