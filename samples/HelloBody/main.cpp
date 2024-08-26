@@ -1,94 +1,63 @@
 #include "Utils.h"
 #include "Application.h"
 
-struct HelloVoxelDynamicsScene : Scene
+struct HelloBodyScene : Scene
 {
     VDSimulation sim;
     VDAgentController* pController;
-    std::vector<InstanceBuffer> ibs;
+    InstanceBuffer ib;
+    std::vector<VDBody*> pBodyStack;
+    VDBody* pControllable;
     void init() override
     {
-        sim = VDSimulation(20, { -20,-20,-20 }, 2, 2);
-        for (int i = -10; i <= 10; i++)
+        camera.position += VDVector3(0, 5, 0);
+        sim = VDSimulation(50, { -25, 0, -25 }, 1, 1);
+        for (int i = 0; i < 50; i++)
         {
-            for (int j = -10; j <= 10; j++)
+            for (int j = 0; j < 50; j++)
             {
-                sim.space.setVoxelOccupied({ (float)i, 0, (float)j });
+                sim.space.setVoxelOccupied({ float(i - 25), 0, float(j - 25) });
             }
         }
-        for (int i = 0; i < 2; i++)
-        {
-            for (int j = 0; j < 2; j++)
-            {
-                for (int k = 0; k < 2; k++)
-                {
-                    sim.space.setChunkOccupied({ i,j,k });
-                }
-            }
-        }
-        ibs.reserve(8);
-        for (int i = 0; i < 8; i++)
-        {
-            if (sim.space.grids[i].occupied)
-            {
-                ibs.push_back(InstanceBuffer::instanceBufferFromChunk(*sim.space.grids[i].pChunk, 400));
-                sim.space.grids[i].pChunk->userData = &ibs[i];
-            }
-        }
-        pController = sim.createAgentController(VDVector3(0, 2, 0), VDVector3(0.3, 0.8, 0.3), 3.0f);
+       ib = InstanceBuffer::instanceBufferFromChunk(*sim.space.grids[0].pChunk, 50 * 50);
+       for (int i = 0; i < 5; i++)
+       {
+           for (int j = 0; j <= i; j++)
+           {
+               VDBody* pBody = sim.createAABBBody(VDAABB::fromMidPointAndHalfExtents(VDVector3::half(), VDVector3(j, 1.5+i, 0)), 1.0f);
+               //pBody->setSleeping(true);
+               pBodyStack.push_back(pBody);
+           }
+       }
+       //pBody = sim.createAABBBody(VDAABB::fromMidPointAndHalfExtents(VDVector3::half(), VDVector3(0, 8, 0)), 1.0f);
+       pControllable = sim.createAABBBody(VDAABB::fromMidPointAndHalfExtents(VDVector3::half(), VDVector3(0, 10, 0)), 1.0f);
     }
 
     void update(float dt) override
     {
         Scene::update(dt);
-        moveAgentWithArrows(camera, *pController, dt, pController->speed);
-        camera.position = pController->position + VDVector3(0, pController->halfExtents.y, 0);
         sim.simulate(dt);
-		VDGrid* pGrid = sim.space.getGrid(camera.position);
-		if (pGrid != nullptr)
-		{
-            VDVoxel* pVoxel = sim.space.getVoxel(camera.position + camera.forward * 2.5f);
-            if (pVoxel)
-            {
-                drawVoxel(*pVoxel, { 0,0,1 });
-                if (keysDown[GLFW_KEY_Q])
-                {
-                    VDGrid* PVoxelGrid = sim.space.grids[pVoxel->chunkIndex].pChunk;
-                    InstanceBuffer* pBuffer = PVoxelGrid->userData;
-                    if (!pVoxel->occupied)
-                    {
-                        pVoxel->occupied = true;
-                        pBuffer->data.insertVoxel(pVoxel);
-                        pBuffer->bind();
-                        pBuffer->updateInstanceBuffer();
-                    }
-                }
-                if (keysDown[GLFW_KEY_E])
-                {
-                    VDGrid* PVoxelGrid = sim.space.grids[pVoxel->chunkIndex].pChunk;
-                    InstanceBuffer* pBuffer = PVoxelGrid->userData;
-                    if (pVoxel->occupied)
-                    {
-                        pVoxel->occupied = false;
-                        pBuffer->data.removeVoxel(pVoxel);
-                        pBuffer->bind();
-                        pBuffer->updateInstanceBuffer();
-                    }
-                }
-            }
-		}
-
+        if (keysDown[GLFW_KEY_SPACE])
+        {
+            pControllable->sleeping = false;
+            pControllable->setPosition(camera.position);
+            pControllable->clearForces();
+            pControllable->deltaMomentums.insert(camera.forward * 20.0f);
+            pControllable->momentum = VDVector3();
+        }
     }
 
     void draw(float dt) override
     {
-       // drawTranslatedBox(VDVector3(), {1,0,1});
-        drawSpace(sim.space, { 0,1,0 });
-
-        for (int i = 0; i < ibs.size(); i++)
+        drawInstanceBuffer(ib, texArr);
+        for (int i = 0; i < pBodyStack.size(); i++)
         {
-            drawInstanceBuffer(ibs[i], texArr);
+            if(pBodyStack[i]->sleeping)
+                drawSolidAABB(*pBodyStack[i], { 1,0,0 });
+            else
+                drawSolidAABB(*pBodyStack[i], { 0,1,0 });
         }
+        drawSolidAABB(*pControllable, { 1,1,1 });
     }
 };
 
@@ -96,7 +65,7 @@ struct HelloVoxelDynamicsScene : Scene
 int main(void)
 {
     initApplication();
-    HelloVoxelDynamicsScene scene;
+    HelloBodyScene scene;
     runApplication(&scene);
     return 0;
 }

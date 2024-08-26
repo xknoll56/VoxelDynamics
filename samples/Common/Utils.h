@@ -473,7 +473,7 @@ struct InstanceBuffer : VertexBuffer
     void updateInstanceBuffer()
     {
         numInstances = data.instancePositions.size();
-        if (numInstances < capacity)
+        if (numInstances <= capacity)
         {
             glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
             glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(VDVector3) * data.instancePositions.size(), data.instancePositions.data());
@@ -523,7 +523,7 @@ struct InstanceBuffer : VertexBuffer
         glDrawArraysInstanced(GL_TRIANGLES, 0, numVerts, numInstances);
     }
 
-    static InstanceBuffer instanceBufferFromChunk(VDGrid& chunk, VDuint capacity)
+    static InstanceBuffer instanceBufferFromChunk(VDGrid& chunk, VDuint capacity, int texInd = 0)
     {
         std::vector<int> texts;
         VDList<VDVoxel*> voxelList = chunk.getOccupiedVoxels();
@@ -535,7 +535,7 @@ struct InstanceBuffer : VertexBuffer
         for (int i = 0; i < occupiedVector.size(); i++)
         {
             posesVec.push_back(occupiedVector[i]->lowPosition);
-            texts.push_back(0);
+            texts.push_back(texInd);
             occupiedVector[i]->userData = (VDPointer)i;
             chunk.setVoxel(occupiedVector[i]->index, *occupiedVector[i]);
         }
@@ -576,6 +576,61 @@ struct TextureArray
             // Free the image memory
             stbi_image_free(data);
         }
+
+        // Set texture parameters
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+        // Bind the texture array to a texture unit
+        this->textureUnit = textureUnit;
+        glActiveTexture(textureUnit);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, textureArray);
+    }
+
+    void initBrickTexture(GLuint textureUnit, int brickWidth = 8, int brickHeight = 4, int rows = 4, int columns = 4)
+    {
+        // Create the texture array
+        glGenTextures(1, &textureArray);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, textureArray);
+
+        // Calculate the overall texture dimensions
+        int w = columns * brickWidth;
+        int h = rows * brickHeight;
+        std::vector<unsigned char> data(w * h * 4);
+
+        // Define the brick colors
+        unsigned char brickColor[3] = { 178, 34, 34 };  // Firebrick color
+        unsigned char mortarColor[3] = { 169, 169, 169 }; // DarkGray color
+
+        // Generate the brick pattern
+        for (int y = 0; y < h; ++y) {
+            for (int x = 0; x < w; ++x) {
+                int row = y / brickHeight;
+                int col = (x + (row % 2) * (brickWidth / 2)) / brickWidth;
+
+                // Determine if this pixel is part of a brick or mortar
+                bool isBrick = (x % brickWidth != 0) && (y % brickHeight != 0);
+
+                int index = (y * w + x) * 4;
+                if (isBrick) {
+                    data[index] = brickColor[0];
+                    data[index + 1] = brickColor[1];
+                    data[index + 2] = brickColor[2];
+                }
+                else {
+                    data[index] = mortarColor[0];
+                    data[index + 1] = mortarColor[1];
+                    data[index + 2] = mortarColor[2];
+                }
+                data[index + 3] = 255; // Alpha
+            }
+        }
+
+        // Allocate storage and upload the texture
+        glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GL_RGBA8, w, h, 1);
+        glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0, w, h, 1, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
 
         // Set texture parameters
         glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);

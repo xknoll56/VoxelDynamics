@@ -204,7 +204,7 @@ void initApplication()
 
     stbi_set_flip_vertically_on_load(true);
 
-    texArr.initCheckersTexture(0);
+    texArr.initBrickTexture(0);
 
     instancedShader.insertUniformInt("textureArray");
     instancedShader.setUniformInt("textureArray", 0);

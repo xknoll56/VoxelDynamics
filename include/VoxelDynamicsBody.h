@@ -7,6 +7,7 @@ struct VDBody : VDCollider
 {
 	float mass;
 	VDVector3 velocity;
+	VDVector3 momentum;
 	VDList<VDVector3> deltaMomentums;
 	VDList<VDVector3> forces;
 	float restitution;
@@ -45,7 +46,7 @@ struct VDBody : VDCollider
 	{
 		for (auto dpData = deltaMomentums.pFirst; dpData != nullptr; dpData = dpData->pNext)
 		{
-			velocity += dpData->item * (1.0f / mass);
+			momentum += dpData->item;
 		}
 		deltaMomentums.free();
 		deltaMomentums = VDList<VDVector3>();
@@ -56,7 +57,7 @@ struct VDBody : VDCollider
 	{
 		for (auto fData = forces.pFirst; fData != nullptr; fData = fData->pNext)
 		{
-			velocity += fData->item * (dt / mass);
+			momentum += fData->item * dt;
 		}
 		forces.free();
 		forces = VDList<VDVector3>();
@@ -86,6 +87,7 @@ struct VDBody : VDCollider
 		{
 			applyDeltaMomentums();
 			applyForces(dt);
+			velocity = momentum * (1.0f / mass);
 			translate(velocity * dt);
 		}
 	}
