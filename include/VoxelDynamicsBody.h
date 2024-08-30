@@ -77,6 +77,8 @@ struct VDBody : VDCollider
 		{
 			forces.free();
 			deltaMomentums.free();
+			momentum = VDVector3();
+			velocity = VDVector3();
 		}
 	}
 

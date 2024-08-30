@@ -153,7 +153,8 @@ struct VDSimulation
 		frictionDir = frictionDir * -1.0f;
 		
 		float vMag = pBody->velocity.length();
-		pBody->deltaMomentums.insert(frictionDir * vMag * pBody->mass * pBody->friction * frictionFactor );
+		if(frictionDir.length()>0.0f)
+			pBody->deltaMomentums.insert(frictionDir * vMag * pBody->mass * pBody->friction * frictionFactor );
 		if (vMag < 0.5f && contactPoint.normal.y > 0.0f)
 			pBody->setSleeping(true);
 	}
@@ -161,32 +162,47 @@ struct VDSimulation
 	void resolveAABBDynamicBodyContact(VDBody* pBody, const VDContactPoint& contactPoint, float dt)
 	{
 		VDBody* pOtherBody = (VDBody*)contactPoint.pOtherContact;
-		//VDVector3 vRel = pBody->velocity - 
-		pOtherBody->sleeping = false;
 		pBody->translate(contactPoint.normal * contactPoint.penetrationDistance*0.5f);
 		pOtherBody->translate(contactPoint.normal * -contactPoint.penetrationDistance * 0.5f);
 
 		VDVector3 vRel = (pOtherBody->velocity - pBody->velocity);
 		VDVector3 vn = contactPoint.normal * VDDot(contactPoint.normal, vRel);
-		pBody->deltaMomentums.insert(vn * pBody->mass * pBody->restitution);
-		pOtherBody->deltaMomentums.insert(vn * pBody->mass * -pBody->restitution);
-		VDVector3 normalVelocity = VDNormalComponent(pBody->velocity, contactPoint.normal);
-		VDVector3 frictionDir = vRel - normalVelocity;
-		frictionDir.normalize();
-		frictionDir = frictionDir;
 
-		float vMag = pBody->velocity.length();
+		float vMag = vRel.length();
 		float vnMag = vn.length();
-		pBody->deltaMomentums.insert(frictionDir * vnMag * pBody->mass * pBody->friction * frictionFactor);
-		if (vMag < 0.5f && contactPoint.normal.y > 0.0f)
-			pBody->setSleeping(true);
+		
+		if (vMag < 0.5f)
+		{
+			if(contactPoint.normal.y > 0.0f)
+				pBody->setSleeping(true);
+		}
+		else
+		{
+			if (pOtherBody->sleeping)
+				pOtherBody->setSleeping(false);
+			if (contactPoint.penetrationDistance>0.1f)
+			{
+				int test = 1;
+			}
+			pBody->deltaMomentums.insert(vn * pBody->mass * pBody->restitution);
+			pOtherBody->deltaMomentums.insert(vn * pBody->mass * -pBody->restitution);
+			//VDVector3 normalVelocity = VDNormalComponent(vRel, contactPoint.normal);
+			VDVector3 frictionDir = VDTangentialComponent(vRel, contactPoint.normal);
+			frictionDir.normalize();
+			frictionDir = frictionDir;
+			if (frictionDir.length() > 0.0f)
+			{
+				pBody->deltaMomentums.insert(frictionDir * vnMag * pBody->mass * pBody->friction * frictionFactor);
+				pOtherBody->deltaMomentums.insert(frictionDir * vnMag * -pBody->mass * pBody->friction * frictionFactor);
+			}
+		}
 	}
 
 	void simulateBodies(float dt)
 	{
 		for (auto it = pBodies.pFirst; it != nullptr; it = it->pNext)
 		{
-			if(it->item->useGravity)
+			if(it->item->useGravity && !it->item->sleeping)
 				it->item->forces.insert(gravity*it->item->mass);
 			it->item->simulate(dt);
 			space.updateCollider(*it->item);
