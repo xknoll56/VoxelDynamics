@@ -209,7 +209,7 @@ struct VDSimulation
 
 			VDList<VDPointer> uniqueColliders(true);
 			VDList<VDVoxel*> sampledVoxels(true);
-			space.sampleOccupiedRegion(*it->item, sampledVoxels, uniqueColliders);
+			space.sampleOccupiedRegion(*it->item, sampledVoxels, uniqueColliders, 0.005f);
 			VDCollider* pThis = (VDCollider*)it->item;
 			bool hasIntersection = false;
 			for (auto collIt = uniqueColliders.pFirst; collIt != nullptr; collIt = collIt->pNext)
@@ -221,13 +221,14 @@ struct VDSimulation
 					bool doesIntersect = it->item->intersectionRegion(*pAABBCollider, intersectionRegion);
 					if (doesIntersect)
 					{
-						hasIntersection = true;
 						VDVector3 quadrantDir = VDSign(it->item->position - pAABBCollider->position);
 						VDAABBContact contact((VDPointer)it->item, (VDPointer)collIt->item, intersectionRegion, quadrantDir);
 						contact.setPenetrations();
 						VDContactPoint contactPoint((VDPointer)it->item, (VDPointer)collIt->item, intersectionRegion.position,
 							VDDirectionToVector(contact.minDirections[0]), contact.getPenetrationByDirection(contact.minDirections[0]));
 						resolveAABBDynamicBodyContact(it->item, contactPoint, dt);
+						if (contact.intersectionRegion.position.y < it->item->position.y)
+							hasIntersection = true;
 					}
 				}
 			}
