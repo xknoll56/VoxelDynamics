@@ -227,7 +227,7 @@ struct VDSimulation
 						VDContactPoint contactPoint((VDPointer)it->item, (VDPointer)collIt->item, intersectionRegion.position,
 							VDDirectionToVector(contact.minDirections[0]), contact.getPenetrationByDirection(contact.minDirections[0]));
 						resolveAABBDynamicBodyContact(it->item, contactPoint, dt);
-						if (contact.intersectionRegion.position.y < it->item->position.y)
+						if (contact.intersectionRegion.position.y < it->item->position.y && contact.intersectionRegion.crossSection(VDDirection::UP)>0.05f)
 							hasIntersection = true;
 					}
 				}

@@ -212,6 +212,31 @@ struct VDAABB
 		copy.halfExtents += skin;
 		return copy;
 	}
+
+	float crossSection(VDDirection dir)
+	{
+		switch (dir)
+		{
+		case VDDirection::RIGHT:
+			return halfExtents.y * halfExtents.z*2.0f;
+			break;
+		case VDDirection::LEFT:
+			return halfExtents.y * halfExtents.z * 2.0f;
+			break;
+		case VDDirection::UP:
+			return halfExtents.x * halfExtents.z * 2.0f;
+			break;
+		case VDDirection::DOWN:
+			return halfExtents.x * halfExtents.z * 2.0f;
+			break;
+		case VDDirection::FORWARD:
+			return halfExtents.x * halfExtents.y * 2.0f;
+			break;
+		case VDDirection::BACK:
+			return halfExtents.x * halfExtents.y * 2.0f;
+			break;
+		}
+	}
 };
 
 struct VDPenetrationField
