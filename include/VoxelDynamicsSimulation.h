@@ -180,14 +180,13 @@ struct VDSimulation
 		{
 			if (pOtherBody->sleeping)
 				pOtherBody->setSleeping(false);
-			if (contactPoint.penetrationDistance>0.1f)
+			if (VDDot(contactPoint.normal, vRel) > 0.0f)
 			{
-				int test = 1;
+				pBody->deltaMomentums.insert(vn * pBody->mass * pBody->restitution);
+				pOtherBody->deltaMomentums.insert(vn * pBody->mass * -pBody->restitution);
 			}
-			pBody->deltaMomentums.insert(vn * pBody->mass * pBody->restitution);
-			pOtherBody->deltaMomentums.insert(vn * pBody->mass * -pBody->restitution);
 			//VDVector3 normalVelocity = VDNormalComponent(vRel, contactPoint.normal);
-			VDVector3 frictionDir = VDTangentialComponent(vRel, contactPoint.normal);
+			VDVector3 frictionDir = vRel - vn;
 			frictionDir.normalize();
 			frictionDir = frictionDir;
 			if (frictionDir.length() > 0.0f)
@@ -212,6 +211,7 @@ struct VDSimulation
 			VDList<VDVoxel*> sampledVoxels(true);
 			space.sampleOccupiedRegion(*it->item, sampledVoxels, uniqueColliders);
 			VDCollider* pThis = (VDCollider*)it->item;
+			bool hasIntersection = false;
 			for (auto collIt = uniqueColliders.pFirst; collIt != nullptr; collIt = collIt->pNext)
 			{
 				VDCollider* pAABBCollider = collIt->item;
@@ -221,6 +221,7 @@ struct VDSimulation
 					bool doesIntersect = it->item->intersectionRegion(*pAABBCollider, intersectionRegion);
 					if (doesIntersect)
 					{
+						hasIntersection = true;
 						VDVector3 quadrantDir = VDSign(it->item->position - pAABBCollider->position);
 						VDAABBContact contact((VDPointer)it->item, (VDPointer)collIt->item, intersectionRegion, quadrantDir);
 						contact.setPenetrations();
@@ -229,6 +230,10 @@ struct VDSimulation
 						resolveAABBDynamicBodyContact(it->item, contactPoint, dt);
 					}
 				}
+			}
+			if (!hasIntersection && sampledVoxels.count == 0)
+			{
+				it->item->sleeping = false;
 			}
 			VDPenetrationField field;
 			VDList<VDContactPoint> voxelContactPoints(true);

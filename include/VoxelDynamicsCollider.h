@@ -202,6 +202,16 @@ struct VDAABB
 	bool collisionAABB(const VDAABB* pOther, VDAABBContact& contact);
 
 	void resolveAABBContact(const VDAABBContact& contact);
+
+	VDAABB skinnedAABB(float skinWidth)
+	{
+		VDAABB copy = *this;
+		VDVector3 skin(skinWidth, skinWidth, skinWidth);
+		copy.high += skin;
+		copy.low += skin * -1.0f;
+		copy.halfExtents += skin;
+		return copy;
+	}
 };
 
 struct VDPenetrationField

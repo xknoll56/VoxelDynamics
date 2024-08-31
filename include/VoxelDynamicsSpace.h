@@ -419,6 +419,7 @@ struct VDSpace
 	VDVector3i anchor;
 	VDuint horizontalGrids;
 	VDuint verticalGrids;
+	static float sampleSkin;
 
 	VDSpace()
 	{
@@ -564,10 +565,12 @@ struct VDSpace
 
 	void sampleOccupiedRegion(VDAABB aabb, VDList<VDVoxel*>& occupiedVoxels, VDList<VDPointer>& uniqueColliders) const
 	{
+		// Sample skin is required for when aabb's lie direction on top of a voxel and are not picked up by default
+		VDAABB skinnedAABB = aabb.skinnedAABB(sampleSkin);
 		VDList<VDGrid*> sampledChunks = sampleChunks(aabb);
 		for (auto chunkIt = sampledChunks.pFirst; chunkIt != nullptr; chunkIt = chunkIt->pNext)
 		{
-			chunkIt->item->sampleOccupiedRegion(aabb, occupiedVoxels, uniqueColliders);
+			chunkIt->item->sampleOccupiedRegion(skinnedAABB, occupiedVoxels, uniqueColliders);
 		}
 		sampledChunks.free();
 	}
@@ -725,5 +728,7 @@ struct VDSpace
 		return nullptr;
 	}
 };
+
+float VDSpace::sampleSkin = 0.005f;
 
 #endif
