@@ -614,7 +614,7 @@ struct VDFrame
         forward = other.forward;
     }
 
-    const VDFrame operator=(const VDFrame& other)
+    VDFrame& operator=(const VDFrame& other)
     {
         if (this != &other)
         {
@@ -676,7 +676,7 @@ struct VDFrame
             z = other.z;
         }
 
-        const VDQuaternion operator=(const VDQuaternion& other)
+        VDQuaternion& operator=(const VDQuaternion& other)
         {
             if (this != &other)
             {
@@ -689,12 +689,13 @@ struct VDFrame
             return *this;
         }
 
-        static VDQuaternion conjugate(VDQuaternion quat)
+        static VDQuaternion conjugate(const VDQuaternion& quat)
         {
-            quat.x = -quat.x;
-            quat.y = -quat.y;
-            quat.z = -quat.z;
-            return quat;
+            VDQuaternion retQuat = quat;
+            retQuat.x = -quat.x;
+            retQuat.y = -quat.y;
+            retQuat.z = -quat.z;
+            return retQuat;
         }
 
         void conjugate()
@@ -751,7 +752,7 @@ struct VDFrame
         w = w / mag;
         x = x / mag;
         y = y / mag;
-        z = z = mag;
+        z = z / mag;
     }
 
     VDQuaternion operator*(const VDQuaternion& other)
