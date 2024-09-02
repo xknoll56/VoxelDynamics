@@ -57,6 +57,7 @@ void initApplication()
     shader.insertUniformInt("colorMix");
     shader.setUniformFloat("colorMix", 0.0f);
     shader.insertUniformVector3("solidColor");
+    shader.insertUniformMatrix4("model");
 
     wireShader.LoadShaders("Shaders/wireVert.glsl", "Shaders/wireFrag.glsl");
     wireShader.insertUniformVector3("solidColor");
@@ -226,11 +227,12 @@ void initApplication()
 
 extern float dYaw;
 extern float dPitch;
+double elapsedTime;
 
 void runApplication(Scene* pScene)
 {
     pScene->init();
-    double elapsedTime = glfwGetTime();
+    elapsedTime = glfwGetTime();
     bool mouseLocked = false;
     double mouseLockX, mouseLockY;
 

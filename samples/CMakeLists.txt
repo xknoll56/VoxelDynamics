@@ -74,3 +74,4 @@ endif()
 # Include the subdirectories containing the CMakeLists.txt files
 add_subdirectory(HelloVoxelDynamics)
 add_subdirectory(HelloBody)
+add_subdirectory(HelloBox)

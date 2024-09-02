@@ -811,6 +811,36 @@ void drawVertexBuffer(const VertexBuffer& vertexBuffer, VDVector3 translation, V
     vertexBuffer.draw(mode);
 }
 
+void drawBox(VDVector3 translation, VDVector3 euler, VDVector3 scale, VDVector3 color, GLenum mode = GL_TRIANGLES)
+{
+    switch (mode)
+    {
+    case GL_TRIANGLES:
+    {
+        shader.use();
+        shader.setUniformFloat("colorMix", 1.0f);
+        shader.setUniformVector3("solidColor", color);
+        VDMatrix4 model = VDScale(scale) * VDRotate(euler) * VDTranslation(translation);
+        shader.setUniformMatrix4("model", model);
+        shader.setUniformMatrix4("mvp", model * viewProjection);
+        vbOrigin.bind();
+        vbOrigin.draw(mode);
+    }
+    break;
+    case GL_LINES:
+    {
+        wireShader.use();
+        wireShader.setUniformVector3("solidColor", color);
+        VDMatrix4 model = VDScale(scale) * VDRotate(euler) * VDTranslation(translation);
+        wireShader.setUniformMatrix4("mvp", model * viewProjection);
+        vbWire.bind();
+        vbWire.draw(mode);
+    }
+    break;
+    }
+
+}
+
 void drawSolidAABB(const VDAABB& aabb, VDVector3 color)
 {
     shader.use();
