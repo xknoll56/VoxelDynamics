@@ -402,11 +402,11 @@ VDVector3 VDTangentialComponent(VDVector3 vector, VDVector3 planeNormal)
     return vector - VDNormalComponent(vector, planeNormal);
 }
 
-struct VDMatrix4
+struct VDMatrix
 {
     float m[4][4];
 
-    VDMatrix4()
+    VDMatrix()
     {
         m[0][0] = 1.0f; m[0][1] = 0.0f; m[0][2] = 0.0f; m[0][3] = 0.0f;
         m[1][0] = 0.0f; m[1][1] = 1.0f; m[1][2] = 0.0f; m[1][3] = 0.0f;
@@ -414,7 +414,7 @@ struct VDMatrix4
         m[3][0] = 0.0f; m[3][1] = 0.0f; m[3][2] = 0.0f; m[3][3] = 1.0f;
     }
 
-    VDMatrix4(float m00, float m01, float m02, float m03,
+    VDMatrix(float m00, float m01, float m02, float m03,
         float m10, float m11, float m12, float m13,
         float m20, float m21, float m22, float m23,
         float m30, float m31, float m32, float m33)
@@ -424,17 +424,17 @@ struct VDMatrix4
         m[2][0] = m20; m[2][1] = m21; m[2][2] = m22; m[2][3] = m23;
         m[3][0] = m30; m[3][1] = m31; m[3][2] = m32; m[3][3] = m33;
     }
-    VDMatrix4(float mat[4][4])
+    VDMatrix(float mat[4][4])
     {
         std::memcpy(m, mat, sizeof(m));
     }
 
-    VDMatrix4(const VDMatrix4& other)
+    VDMatrix(const VDMatrix& other)
     {
         std::memcpy(m, other.m, sizeof(m));
     }
 
-    VDMatrix4& operator=(const VDMatrix4& other)
+    VDMatrix& operator=(const VDMatrix& other)
     {
         if (this != &other)
         {
@@ -443,9 +443,9 @@ struct VDMatrix4
         return *this;
     }
 
-    VDMatrix4 operator*(const VDMatrix4& other) const
+    VDMatrix operator*(const VDMatrix& other) const
     {
-        VDMatrix4 result;
+        VDMatrix result;
 
         result.m[0][0] = m[0][0] * other.m[0][0] + m[0][1] * other.m[1][0] + m[0][2] * other.m[2][0] + m[0][3] * other.m[3][0];
         result.m[0][1] = m[0][0] * other.m[0][1] + m[0][1] * other.m[1][1] + m[0][2] * other.m[2][1] + m[0][3] * other.m[3][1];
@@ -471,9 +471,9 @@ struct VDMatrix4
     }
 };
 
-VDMatrix4 VDTranslation(VDVector3 position)
+VDMatrix VDTranslation(VDVector3 position)
 {
-    VDMatrix4 translationMatrix;
+    VDMatrix translationMatrix;
 
     translationMatrix.m[0][0] = 1.0f; translationMatrix.m[1][0] = 0.0f; translationMatrix.m[2][0] = 0.0f; translationMatrix.m[3][0] = position.x;
     translationMatrix.m[0][1] = 0.0f; translationMatrix.m[1][1] = 1.0f; translationMatrix.m[2][1] = 0.0f; translationMatrix.m[3][1] = position.y;
@@ -483,7 +483,7 @@ VDMatrix4 VDTranslation(VDVector3 position)
     return translationMatrix;
 }
 
-VDMatrix4 VDRotate(VDVector3 eulerAngles)
+VDMatrix VDRotate(VDVector3 eulerAngles)
 {
     float radX = eulerAngles.x;
     float radY = eulerAngles.y;
@@ -496,7 +496,7 @@ VDMatrix4 VDRotate(VDVector3 eulerAngles)
     float cosZ = cosf(radZ);
     float sinZ = sinf(radZ);
 
-    VDMatrix4 rotationMatrix;
+    VDMatrix rotationMatrix;
 
     rotationMatrix.m[0][0] = cosY * cosZ;
     rotationMatrix.m[1][0] = -cosY * sinZ;
@@ -521,9 +521,9 @@ VDMatrix4 VDRotate(VDVector3 eulerAngles)
     return rotationMatrix;
 }
 
-VDMatrix4 VDScale(VDVector3 scale)
+VDMatrix VDScale(VDVector3 scale)
 {
-    VDMatrix4 scaleMatrix;
+    VDMatrix scaleMatrix;
 
     scaleMatrix.m[0][0] = scale.x;
     scaleMatrix.m[1][0] = 0.0f;
@@ -548,14 +548,14 @@ VDMatrix4 VDScale(VDVector3 scale)
     return scaleMatrix;
 }
 
-VDMatrix4 VDPerspective(float aspectRatio, float fovYRadians, float zNear, float zFar)
+VDMatrix VDPerspective(float aspectRatio, float fovYRadians, float zNear, float zFar)
 {
     float yScale = tanf(0.5f * ((float)PI - fovYRadians));
     float xScale = yScale / aspectRatio;
     float zRangeInverse = 1.0f / (zNear - zFar);
     float zScale = zFar * zRangeInverse;
     float zTranslation = zFar * zNear * zRangeInverse;
-    return VDMatrix4(
+    return VDMatrix(
         xScale, 0, 0, 0,
         0, yScale, 0, 0,
         0, 0, zScale, -1,
@@ -563,13 +563,13 @@ VDMatrix4 VDPerspective(float aspectRatio, float fovYRadians, float zNear, float
     );
 }
 
-VDMatrix4 VDLookAt(VDVector3 eye, VDVector3 at, VDVector3 up)
+VDMatrix VDLookAt(VDVector3 eye, VDVector3 at, VDVector3 up)
 {
     VDVector3 zAxis = VDNormalize(VDSubtract(eye, at));
     VDVector3 xAxis = VDNormalize(VDCross(up, zAxis));
     VDVector3 yAxis = VDCross(zAxis, xAxis);
 
-    return VDMatrix4(
+    return VDMatrix(
         xAxis.x, yAxis.x, zAxis.x, 0,
         xAxis.y, yAxis.y, zAxis.y, 0,
         xAxis.z, yAxis.z, zAxis.z, 0,
@@ -577,9 +577,9 @@ VDMatrix4 VDLookAt(VDVector3 eye, VDVector3 at, VDVector3 up)
     );
 }
 
-VDMatrix4 VDTranspose(VDMatrix4 mat)
+VDMatrix VDTranspose(VDMatrix mat)
 {
-    return VDMatrix4(
+    return VDMatrix(
         mat.m[0][0], mat.m[1][0], mat.m[2][0], mat.m[3][0],
         mat.m[0][1], mat.m[1][1], mat.m[2][1], mat.m[3][1],
         mat.m[0][2], mat.m[1][2], mat.m[2][2], mat.m[3][2],
@@ -626,9 +626,9 @@ struct VDFrame
         return *this;
     }
 
-    VDMatrix4 toRotationMatrix()
+    VDMatrix toRotationMatrix()
     {
-        VDMatrix4 mat;
+        VDMatrix mat;
         mat.m[0][0] = right.x;
         mat.m[1][0] = right.y;
         mat.m[2][0] = right.z;
@@ -638,9 +638,10 @@ struct VDFrame
         mat.m[0][2] = forward.x;
         mat.m[1][2] = forward.y;
         mat.m[2][2] = forward.z;
+        return mat;
     }
 
-    static VDFrame fromRotationMatrix(VDMatrix4 mat)
+    static VDFrame fromRotationMatrix(VDMatrix mat)
     {
         VDFrame frame(VDVector3(mat.m[0][0], mat.m[1][0], mat.m[2][0]),
             VDVector3(mat.m[0][1], mat.m[1][1], mat.m[2][1]),
@@ -719,6 +720,28 @@ struct VDFrame
         frame.forward.z = -2.0f * (x * x + y * y) + 1.0f;
 
         return frame;
+    }
+
+    VDMatrix toMatrix()
+    {
+        VDMatrix mr;
+        mr.m[0][0] = -2.0f * (y * y + z * z) + 1.0f;
+        mr.m[0][1] = 2.0f * (x * y - w * z);
+        mr.m[0][2] = 2.0f * (x * z + w * y);
+        mr.m[0][3] = 0.0f;
+        mr.m[1][0] = 2.0f * (x * y + w * z);
+        mr.m[1][1] = -2.0f * (x * x + z * z) + 1.0f;
+        mr.m[1][2] = 2.0f * (y * z - w * x);
+        mr.m[1][3] = 0.0f;
+        mr.m[2][0] = 2.0f * (x * z - w * y);
+        mr.m[2][1] = 2.0f * (y * z + w * x);
+        mr.m[2][2] = -2.0f * (x * x + y * y) + 1.0f;
+        mr.m[2][3] = 0.0f;
+        mr.m[3][0] = 0.0f;
+        mr.m[3][1] = 0.0f;
+        mr.m[3][2] = 0.0f;
+        mr.m[3][3] = 1.0f;
+        return mr;
     }
 
     static VDQuaternion fromAngleAxis(VDVector3 axis, float angle)

@@ -159,7 +159,7 @@ struct Shader
 		glUniform2f(uniformVector2s[name], value.x, value.y);
 	}
 
-	void setUniformMatrix4(std::string name, VDMatrix4 value)
+	void setUniformMatrix4(std::string name, VDMatrix value)
 	{
 		glUniformMatrix4fv(uniformMatrix4s[name], 1, GL_FALSE, &value.m[0][0]);
 	}

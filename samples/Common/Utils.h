@@ -65,7 +65,7 @@ struct Camera
     float cameraSpeed = 1.0f;
     float pitch, yaw;
     VDVector3 position;
-    VDMatrix4 view;
+    VDMatrix view;
 
     struct CameraControls
     {
@@ -274,8 +274,8 @@ struct VertexBuffer
 Shader shader;
 Shader wireShader;
 Shader instancedShader;
-VDMatrix4 viewProjection;
-VDMatrix4 proj;
+VDMatrix viewProjection;
+VDMatrix proj;
 VertexBuffer vbOrigin;
 VertexBuffer vbPositiveQuadrant;
 VertexBuffer vbWire;
@@ -805,13 +805,13 @@ void drawVertexBuffer(const VertexBuffer& vertexBuffer, VDVector3 translation, V
     shader.use();
     shader.setUniformFloat("colorMix", 1.0f);
     shader.setUniformVector3("solidColor", color);
-    VDMatrix4 model =  VDScale(scale) * VDRotate(euler) * VDTranslation(translation);
+    VDMatrix model =  VDScale(scale) * VDRotate(euler) * VDTranslation(translation);
     shader.setUniformMatrix4("mvp", model * viewProjection);
     vertexBuffer.bind();
     vertexBuffer.draw(mode);
 }
 
-void drawBox(VDVector3 translation, VDVector3 euler, VDVector3 scale, VDVector3 color, GLenum mode = GL_TRIANGLES)
+void drawBox(VDMatrix model, VDVector3 color, GLenum mode)
 {
     switch (mode)
     {
@@ -820,7 +820,7 @@ void drawBox(VDVector3 translation, VDVector3 euler, VDVector3 scale, VDVector3 
         shader.use();
         shader.setUniformFloat("colorMix", 1.0f);
         shader.setUniformVector3("solidColor", color);
-        VDMatrix4 model = VDScale(scale) * VDRotate(euler) * VDTranslation(translation);
+
         shader.setUniformMatrix4("model", model);
         shader.setUniformMatrix4("mvp", model * viewProjection);
         vbOrigin.bind();
@@ -831,22 +831,34 @@ void drawBox(VDVector3 translation, VDVector3 euler, VDVector3 scale, VDVector3 
     {
         wireShader.use();
         wireShader.setUniformVector3("solidColor", color);
-        VDMatrix4 model = VDScale(scale) * VDRotate(euler) * VDTranslation(translation);
         wireShader.setUniformMatrix4("mvp", model * viewProjection);
         vbWire.bind();
         vbWire.draw(mode);
     }
     break;
     }
-
 }
+
+void drawBox(VDVector3 translation, VDVector3 euler, VDVector3 scale, VDVector3 color, GLenum mode = GL_TRIANGLES)
+{
+    VDMatrix model = VDScale(scale) * VDRotate(euler) * VDTranslation(translation);
+    drawBox(model, color, mode);
+}
+
+void drawBox(VDVector3 translation, VDQuaternion rotation, VDVector3 scale, VDVector3 color, GLenum mode = GL_TRIANGLES)
+{
+    VDMatrix model = VDScale(scale) * rotation.toMatrix() * VDTranslation(translation);
+    drawBox(model, color, mode);
+}
+
+
 
 void drawSolidAABB(const VDAABB& aabb, VDVector3 color)
 {
     shader.use();
     shader.setUniformFloat("colorMix", 1.0f);
     shader.setUniformVector3("solidColor", color);
-    VDMatrix4 model = VDScale(aabb.halfExtents*2.0f) * VDTranslation(aabb.position);
+    VDMatrix model = VDScale(aabb.halfExtents*2.0f) * VDTranslation(aabb.position);
     shader.setUniformMatrix4("mvp", model * viewProjection);
     vbOrigin.bind();
     vbOrigin.draw();
@@ -875,7 +887,7 @@ void drawWireFrameVertexBuffer(const VertexBuffer& vertexBuffer, VDVector3 trans
 {
     wireShader.use();
     wireShader.setUniformVector3("solidColor", color);
-    VDMatrix4 model = VDScale(scale) * VDRotate(euler) * VDTranslation(translation);
+    VDMatrix model = VDScale(scale) * VDRotate(euler) * VDTranslation(translation);
     wireShader.setUniformMatrix4("mvp", model * viewProjection);
     vertexBuffer.bind();
     vertexBuffer.draw(GL_LINES);
