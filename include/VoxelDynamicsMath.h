@@ -818,6 +818,12 @@ struct VDFrame
         return qr;
     }
 
+    void rotate(VDQuaternion rotation)
+    {
+        *this = rotation * (*this);
+        normalize();
+    }
+
     VDVector3 rotatePoint(VDVector3 point)
     {
         VDQuaternion rotatedQuat = (*this*VDQuaternion(0.0f, point.x, point.y, point.z))*VDQuaternion::conjugate(*this);

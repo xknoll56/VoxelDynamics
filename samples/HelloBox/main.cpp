@@ -4,7 +4,7 @@
 struct HellBoxScene : Scene
 {
 
-    
+    VDQuaternion rotation;
     void init() override
     {
 
@@ -13,13 +13,13 @@ struct HellBoxScene : Scene
     void update(float dt) override
     {
         Scene::update(dt);
-
+        rotation.rotate(VDQuaternion::fromEulerAngles(VDVector3(0, dt, 0)));
     }
 
     void draw(float dt) override
     {
-        drawBox(VDVector3(), VDQuaternion::fromEulerAngles(VDVector3(0, elapsedTime, 0)), VDVector3::one(), VDVector3::one());
-        drawBox(VDVector3(), VDQuaternion::fromEulerAngles(VDVector3(0, elapsedTime, 0)), VDVector3::one(), VDVector3(0,1,0), GL_LINES);
+        drawBox(VDVector3(), rotation, VDVector3::one(), VDVector3::one());
+        drawBox(VDVector3(), rotation, VDVector3::one(), VDVector3(0,1,0), GL_LINES);
     }
 };
 
