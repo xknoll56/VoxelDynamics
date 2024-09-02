@@ -587,4 +587,263 @@ VDMatrix4 VDTranspose(VDMatrix4 mat)
     );
 }
 
+struct VDFrame
+{
+    VDVector3 right;
+    VDVector3 up;
+    VDVector3 forward;
+
+    VDFrame()
+    {
+        right = VDVector3::right();
+        up = VDVector3::up();
+        forward = VDVector3::forward();
+    }
+
+    VDFrame(VDVector3 _right, VDVector3 _up, VDVector3 _forward)
+    {
+        right = _right;
+        up = _up;
+        forward = _forward;
+    }
+
+    VDFrame(const VDFrame& other)
+    {
+        right = other.right;
+        up = other.up;
+        forward = other.forward;
+    }
+
+    const VDFrame operator=(const VDFrame& other)
+    {
+        if (this != &other)
+        {
+            this->right = other.right;
+            this->up = other.up;
+            this->forward = other.forward;
+        }
+
+        return *this;
+    }
+
+    VDMatrix4 toRotationMatrix()
+    {
+        VDMatrix4 mat;
+        mat.m[0][0] = right.x;
+        mat.m[1][0] = right.y;
+        mat.m[2][0] = right.z;
+        mat.m[0][1] = up.x;
+        mat.m[1][1] = up.y;
+        mat.m[2][1] = up.z;
+        mat.m[0][2] = forward.x;
+        mat.m[1][2] = forward.y;
+        mat.m[2][2] = forward.z;
+    }
+
+    static VDFrame fromRotationMatrix(VDMatrix4 mat)
+    {
+        VDFrame frame(VDVector3(mat.m[0][0], mat.m[1][0], mat.m[2][0]),
+            VDVector3(mat.m[0][1], mat.m[1][1], mat.m[2][1]),
+            VDVector3(mat.m[0][2], mat.m[1][2], mat.m[2][2]));
+    }
+};
+
+    struct VDQuaternion
+    {
+        float w, x, y, z;
+
+        VDQuaternion()
+        {
+            w = 1.0f;
+            x = 0.0f;
+            y = 0.0f;
+            z = 0.0f;
+        }
+
+        VDQuaternion(float _w, float _x, float _y, float _z)
+        {
+            w = _w;
+            x = _x;
+            y = _y;
+            z = _z;
+        }
+
+        VDQuaternion(const VDQuaternion& other)
+        {
+            w = other.w;
+            x = other.x;
+            y = other.y;
+            z = other.z;
+        }
+
+        const VDQuaternion operator=(const VDQuaternion& other)
+        {
+            if (this != &other)
+            {
+                w = other.w;
+                x = other.x;
+                y = other.y;
+                z = other.z;
+            }
+
+            return *this;
+        }
+
+        static VDQuaternion conjugate(VDQuaternion quat)
+        {
+            quat.x = -quat.x;
+            quat.y = -quat.y;
+            quat.z = -quat.z;
+            return quat;
+        }
+
+        void conjugate()
+        {
+            x = -x;
+            y = -y;
+            z = -z;
+        }
+
+    VDFrame toFrame()
+    {
+        VDFrame frame;
+        frame.right.x = -2.0f * (y * y + z * z) + 1.0f;
+        frame.right.y = 2.0f * (x * y + w * z);
+        frame.right.z = 2.0f * (x * z - w * y);
+        frame.up.x = 2.0f * (x * y - w * z);
+        frame.up.y = -2.0f * (x * x + z * z) + 1.0f;
+        frame.up.z = 2.0f * (y * z + w * x);   
+        frame.forward.x = 2.0f * (x * z + w * y);
+        frame.forward.y = 2.0f * (y * z - w * x);
+        frame.forward.z = -2.0f * (x * x + y * y) + 1.0f;
+
+        return frame;
+    }
+
+    static VDQuaternion fromAngleAxis(VDVector3 axis, float angle)
+    {
+        float sTheta = sinf(angle * 0.5f);
+        float cTheta = cosf(angle * 0.5f);
+        return VDQuaternion(cTheta, axis.x * sTheta, axis.y * sTheta, axis.z * sTheta);
+    }
+
+    static VDQuaternion fromEulerAngles(VDVector3 eulerAngles)
+    {
+        float cr = cos(eulerAngles.x * 0.5f);
+        float sr = sin(eulerAngles.x * 0.5f);
+        float cp = cos(eulerAngles.y * 0.5f);
+        float sp = sin(eulerAngles.y * 0.5f);
+        float cy = cos(eulerAngles.z * 0.5f);
+        float sy = sin(eulerAngles.z * 0.5f);
+
+        VDQuaternion qr;
+        qr.w = cr * cp * cy + sr * sp * sy;
+        qr.x = sr * cp * cy - cr * sp * sy;
+        qr.y = cr * sp * cy + sr * cp * sy;
+        qr.z = cr * cp * sy - sr * sp * cy;
+
+        return qr;
+    }
+
+    void normalize()
+    {
+        float mag = sqrtf(w * w + x * x + y * y + z * z);
+        w = w / mag;
+        x = x / mag;
+        y = y / mag;
+        z = z = mag;
+    }
+
+    VDQuaternion operator*(const VDQuaternion& other)
+    {
+        VDQuaternion qr;
+        qr.w = w * other.w - x * other.x - y * other.y - z * other.z;
+        qr.x = w * other.x + x * other.w + y * other.z - z * other.y;
+        qr.y = w * other.y - x * other.z + y * other.w + z * other.x;
+        qr.z = w * other.z + x * other.y - y * other.x + z * other.w;
+        return qr;
+    }
+
+    VDQuaternion operator+(const VDQuaternion& other)
+    {
+        VDQuaternion qr;
+        qr.w = w + other.w;
+        qr.x = x + other.x;
+        qr.y = y + other.y;
+        qr.z = z + other.z;
+        return qr;
+    }
+
+    VDQuaternion operator-(const VDQuaternion& other)
+    {
+        VDQuaternion qr;
+        qr.w = w - other.w;
+        qr.x = x - other.x;
+        qr.y = y - other.y;
+        qr.z = z - other.z;
+        return qr;
+    }
+
+    VDQuaternion operator*(const float s)
+    {
+        VDQuaternion qr;
+        qr.w = w * s;
+        qr.x = x * s;
+        qr.y = y * s;
+        qr.z = z * s;
+        return qr;
+    }
+
+    VDVector3 rotatePoint(VDVector3 point)
+    {
+        VDQuaternion rotatedQuat = (*this*VDQuaternion(0.0f, point.x, point.y, point.z))*VDQuaternion::conjugate(*this);
+        return VDVector3(rotatedQuat.x, rotatedQuat.y, rotatedQuat.z);
+    }
+
+    static VDQuaternion fromFrame(VDFrame frame)
+    {
+        VDQuaternion quat;
+
+        float trace = frame.right.x + frame.up.y + frame.forward.z;
+
+        if (trace > 0)
+        {
+            float s = 0.5f / sqrtf(trace + 1.0f);
+            quat.w = 0.25f / s;
+            quat.x = (frame.up.z - frame.forward.y) * s;
+            quat.y = (frame.forward.x - frame.right.z) * s;
+            quat.z = (frame.right.y - frame.up.x) * s;
+        }
+        else
+        {
+            if (frame.right.x > frame.up.y && frame.right.x > frame.forward.z)
+            {
+                float s = 2.0f * sqrtf(1.0f + frame.right.x - frame.up.y - frame.forward.z);
+                quat.w = (frame.up.z - frame.forward.y) / s;
+                quat.x = 0.25f * s;
+                quat.y = (frame.up.x + frame.right.y) / s;
+                quat.z = (frame.forward.x + frame.right.z) / s;
+            }
+            else if (frame.up.y > frame.forward.z)
+            {
+                float s = 2.0f * sqrtf(1.0f + frame.up.y - frame.right.x - frame.forward.z);
+                quat.w = (frame.forward.x - frame.right.z) / s;
+                quat.x = (frame.up.x + frame.right.y) / s;
+                quat.y = 0.25f * s;
+                quat.z = (frame.forward.y + frame.up.z) / s;
+            }
+            else
+            {
+                float s = 2.0f * sqrtf(1.0f + frame.forward.z - frame.right.x - frame.up.y);
+                quat.w = (frame.right.y - frame.up.x) / s;
+                quat.x = (frame.forward.x + frame.right.z) / s;
+                quat.y = (frame.forward.y + frame.up.z) / s;
+                quat.z = 0.25f * s;
+            }
+        }
+
+        return quat;
+    }
+};
+
 #endif

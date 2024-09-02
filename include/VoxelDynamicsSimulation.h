@@ -180,20 +180,15 @@ struct VDSimulation
 		{
 			if (pOtherBody->sleeping)
 				pOtherBody->setSleeping(false);
-			if (VDDot(contactPoint.normal, vRel) > 0.0f)
-			{
-				pBody->deltaMomentums.insert(vn * pBody->mass * pBody->restitution);
-				pOtherBody->deltaMomentums.insert(vn * pBody->mass * -pBody->restitution);
-			}
+			pBody->deltaMomentums.insert(vn * pBody->mass * pBody->restitution);
+			pOtherBody->deltaMomentums.insert(vn * pBody->mass * -pBody->restitution);
+
 			//VDVector3 normalVelocity = VDNormalComponent(vRel, contactPoint.normal);
 			VDVector3 frictionDir = vRel - vn;
 			frictionDir.normalize();
 			frictionDir = frictionDir;
-			if (frictionDir.length() > 0.0f)
-			{
-				pBody->deltaMomentums.insert(frictionDir * vnMag * pBody->mass * pBody->friction * frictionFactor);
-				pOtherBody->deltaMomentums.insert(frictionDir * vnMag * -pBody->mass * pBody->friction * frictionFactor);
-			}
+			pBody->deltaMomentums.insert(frictionDir * vnMag * pBody->mass * pBody->friction * frictionFactor);
+			pOtherBody->deltaMomentums.insert(frictionDir * vnMag * -pBody->mass * pBody->friction * frictionFactor);
 		}
 	}
 
