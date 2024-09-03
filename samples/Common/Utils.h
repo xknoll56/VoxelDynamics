@@ -14,7 +14,13 @@ VDuint WINDOW_WIDTH = 1268;
 VDuint WINDOW_HEIGHT = 724;
 float aspect = (float)WINDOW_WIDTH / WINDOW_HEIGHT;
 
-
+VDVector3 colorWhite(1.0f, 1.0f, 1.f);
+VDVector3 colorRed(1.0f, 0.0f, 0.f);
+VDVector3 colorGreen(0.0f, 1.0f, 0.f);
+VDVector3 colorBlue(0.0f, 0.0f, 1.f);
+VDVector3 colorYellow(1.0f, 1.0f, 0.0f);
+VDVector3 colorMagenta(1.0f, 0.0f, 1.0f);
+VDVector3 colorCyan(0.0f, 1.0f, 1.0f);
 bool keys[1024];
 bool mouse[32];
 bool keysDown[1024];

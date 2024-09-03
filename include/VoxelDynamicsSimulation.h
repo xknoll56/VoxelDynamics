@@ -4,6 +4,7 @@
 #include "VoxelDynamicsAllocator.h"
 #include "VoxelDynamicsMath.h"
 #include "VoxelDynamicsCollider.h"
+#include "VoxelDynamicsCollisionDetection.h"
 #include "VoxelDynamicsSpace.h"
 #include "VoxelDynamicsBody.h"
 

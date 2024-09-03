@@ -18,8 +18,8 @@ struct HellBoxScene : Scene
 
     void draw(float dt) override
     {
-        drawBox(VDVector3(), rotation, VDVector3::one(), VDVector3::one());
-        drawBox(VDVector3(), rotation, VDVector3::one(), VDVector3(0,1,0), GL_LINES);
+        drawBox(VDVector3(), rotation, VDVector3::one(), colorWhite);
+        drawBox(VDVector3(), rotation, VDVector3::one(), colorCyan, GL_LINES);
     }
 };
 
