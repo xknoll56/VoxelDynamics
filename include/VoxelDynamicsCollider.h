@@ -239,6 +239,50 @@ struct VDAABB
 	}
 };
 
+struct VDOBB : VDAABB
+{
+	VDQuaternion rotation;
+	VDFrame frame;
+
+	VDOBB() : VDAABB(VDVector3::half()*-1.0f, VDVector3::half())
+	{
+		rotation = VDQuaternion();
+		frame = rotation.toFrame();
+	}
+
+	VDOBB(VDVector3 _position, VDVector3 _halfExtents, VDQuaternion _rotation)
+	{
+		halfExtents = _halfExtents;
+		setPosition(_position);
+		rotation = _rotation;
+		frame = rotation.toFrame();
+	}
+
+	void setRotation(VDQuaternion _rotation)
+	{
+		rotation = _rotation;
+		frame = rotation.toFrame();
+	}
+
+	void rotate(VDQuaternion _rotation)
+	{
+		rotation.rotate(_rotation);
+		frame = rotation.toFrame();
+	}
+
+	void setLowAndHigh()
+	{
+		VDVector3 absRight = VDAbs(frame.right);
+		VDVector3 absUp = VDAbs(frame.up);
+		VDVector3 absForward = VDAbs(frame.forward);
+		VDVector3 curHalfExtents(absRight.x * halfExtents.x + absUp.x * halfExtents.y + absForward.x * halfExtents.z,
+			absRight.y * halfExtents.x + absUp.y * halfExtents.y + absForward.y * halfExtents.z,
+			absRight.z * halfExtents.x + absUp.z * halfExtents.y + absForward.z * halfExtents.z);
+		low = position - curHalfExtents;
+		high = position + curHalfExtents;
+	}
+};
+
 struct VDCollider : VDAABB
 {
 	VDColliderType colliderType;
@@ -267,5 +311,7 @@ struct VDCollider : VDAABB
 		return *this;
 	}
 };
+
+
 
 #endif

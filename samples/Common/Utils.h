@@ -856,6 +856,15 @@ void drawBox(VDVector3 translation, VDQuaternion rotation, VDVector3 scale, VDVe
     VDMatrix model = VDScale(scale) * rotation.toMatrix() * VDTranslation(translation);
     drawBox(model, color, mode);
 }
+void drawBox(const VDOBB& box, VDVector3 color, GLenum mode = GL_TRIANGLES)
+{
+    drawBox(box.position, box.rotation, box.halfExtents*2.0f, color, mode);
+}
+
+void drawAABB(VDVector3 low, VDVector3 high, VDVector3 color)
+{
+    drawBox((low + high) * 0.5f, VDVector3(0, 0, 0), high - low, color, GL_LINES);
+}
 
 
 
