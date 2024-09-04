@@ -26,7 +26,6 @@ struct HellBoxScene : Scene
         drawBox(box, colorCyan, false);
         drawAABB(box, colorGreen);
         drawBoxFrame(box, 3.0f);
-        //drawLine({ 0,0,0 }, box.position, colorBlue);
     }
 };
 

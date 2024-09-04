@@ -818,7 +818,7 @@ void drawVertexBuffer(const VertexBuffer& vertexBuffer, VDVector3 translation, V
     vertexBuffer.draw(mode);
 }
 
-void drawBox(VDMatrix model, VDVector3 color, bool fill)
+void drawBox(const VDMatrix& model, const VDVector3& color, bool fill)
 {
     if(fill)
     {

@@ -961,6 +961,27 @@ struct VDQuaternion
 
 		return quat;
 	}
+
+    static VDQuaternion lookAt(VDVector3 start, VDVector3 target, VDVector3 upDirection = VDVector3(0.0f, 1.0f, 0.0f))
+    {
+        // Calculate forward vector
+        VDVector3 forward = VDNormalize(target-start);
+
+            // Calculate right vector
+        VDVector3 right = VDNormalize(VDCross(upDirection, forward));
+
+        // Recalculate up vector to ensure orthogonality
+        VDVector3 up = VDCross(forward,right);
+
+        // Create a VDFrame using the calculated right, up, and forward vectors
+        VDFrame frame;
+        frame.right = right;
+        frame.up = up;
+        frame.forward = forward;
+
+        // Convert the frame to a quaternion using the fromFrame method
+        return VDQuaternion::fromFrame(frame);
+    }
 };
 
 #endif
