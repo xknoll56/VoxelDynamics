@@ -109,7 +109,7 @@ struct VDAABB
 		halfExtents = high - position;
 	}
 
-	void setLowAndHigh()
+	virtual void setLowAndHigh()
 	{
 		low = position - halfExtents;
 		high = position + halfExtents;

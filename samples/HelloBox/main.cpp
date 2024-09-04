@@ -7,21 +7,26 @@ struct HellBoxScene : Scene
     VDOBB box;
     void init() override
     {
-
+        box.setHalfExtents(VDVector3(0.5, 1, 1.5));
+       // box.setPosition({ 4,4,4 });
     }
 
     void update(float dt) override
     {
         Scene::update(dt);
-        box.rotate(VDQuaternion::fromEulerAngles(VDVector3(0, dt, 0)));
+        box.rotation = VDQuaternion::fromEulerAngles(VDVector3(dt * 0.1, dt, dt * 0.7)) * box.rotation;
+        box.rotation.normalize();
+        box.frame = box.rotation.toFrame();
         box.setLowAndHigh();
     }
 
     void draw(float dt) override
     {
         drawBox(box, colorWhite);
-        drawBox(box, colorCyan, GL_LINES);
-        drawAABB(box.low, box.high, colorGreen);
+        drawBox(box, colorCyan, false);
+        drawAABB(box, colorGreen);
+        drawBoxFrame(box, 3.0f);
+        //drawLine({ 0,0,0 }, box.position, colorBlue);
     }
 };
 

@@ -285,6 +285,7 @@ VDMatrix proj;
 VertexBuffer vbOrigin;
 VertexBuffer vbPositiveQuadrant;
 VertexBuffer vbWire;
+VertexBuffer vbLine;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     WINDOW_WIDTH = width;
@@ -817,11 +818,9 @@ void drawVertexBuffer(const VertexBuffer& vertexBuffer, VDVector3 translation, V
     vertexBuffer.draw(mode);
 }
 
-void drawBox(VDMatrix model, VDVector3 color, GLenum mode)
+void drawBox(VDMatrix model, VDVector3 color, bool fill)
 {
-    switch (mode)
-    {
-    case GL_TRIANGLES:
+    if(fill)
     {
         shader.use();
         shader.setUniformFloat("colorMix", 1.0f);
@@ -830,40 +829,49 @@ void drawBox(VDMatrix model, VDVector3 color, GLenum mode)
         shader.setUniformMatrix4("model", model);
         shader.setUniformMatrix4("mvp", model * viewProjection);
         vbOrigin.bind();
-        vbOrigin.draw(mode);
+        vbOrigin.draw(GL_TRIANGLES);
     }
-    break;
-    case GL_LINES:
+    else
     {
         wireShader.use();
         wireShader.setUniformVector3("solidColor", color);
         wireShader.setUniformMatrix4("mvp", model * viewProjection);
         vbWire.bind();
-        vbWire.draw(mode);
-    }
-    break;
+        vbWire.draw(GL_LINES);
     }
 }
 
-void drawBox(VDVector3 translation, VDVector3 euler, VDVector3 scale, VDVector3 color, GLenum mode = GL_TRIANGLES)
+void drawBox(VDVector3 translation, VDVector3 euler, VDVector3 scale, VDVector3 color, bool fill = true)
 {
     VDMatrix model = VDScale(scale) * VDRotate(euler) * VDTranslation(translation);
-    drawBox(model, color, mode);
+    drawBox(model, color, fill);
 }
 
-void drawBox(VDVector3 translation, VDQuaternion rotation, VDVector3 scale, VDVector3 color, GLenum mode = GL_TRIANGLES)
+void drawBox(VDVector3 translation, VDQuaternion rotation, VDVector3 scale, VDVector3 color, bool fill = true)
 {
     VDMatrix model = VDScale(scale) * rotation.toMatrix() * VDTranslation(translation);
-    drawBox(model, color, mode);
+    drawBox(model, color, fill);
 }
-void drawBox(const VDOBB& box, VDVector3 color, GLenum mode = GL_TRIANGLES)
+void drawBox(const VDOBB& box, VDVector3 color, bool fill = true)
 {
-    drawBox(box.position, box.rotation, box.halfExtents*2.0f, color, mode);
+    drawBox(box.position, box.rotation, box.halfExtents*2.0f, color, fill);
 }
 
 void drawAABB(VDVector3 low, VDVector3 high, VDVector3 color)
 {
-    drawBox((low + high) * 0.5f, VDVector3(0, 0, 0), high - low, color, GL_LINES);
+    drawBox((low + high) * 0.5f, VDVector3(0, 0, 0), high - low, color, false);
+}
+
+void drawAABB(const VDAABB& aabb, VDVector3 color)
+{
+    drawAABB(aabb.low, aabb.high, color);
+}
+
+void drawBoxFrame(const VDOBB& box, float size)
+{
+    drawBox(box.position  + box.frame.right*(size*0.5f), box.rotation, VDVector3(size, 0.1f, 0.1f), colorRed, true);
+    drawBox(box.position + box.frame.up * (size * 0.5f), box.rotation, VDVector3(0.1f, size, 0.1f), colorGreen, true);
+    drawBox(box.position + box.frame.forward * (size * 0.5f), box.rotation, VDVector3(0.1f, 0.1f, size), colorBlue, true);
 }
 
 
@@ -906,6 +914,37 @@ void drawWireFrameVertexBuffer(const VertexBuffer& vertexBuffer, VDVector3 trans
     wireShader.setUniformMatrix4("mvp", model * viewProjection);
     vertexBuffer.bind();
     vertexBuffer.draw(GL_LINES);
+}
+
+void drawLine(VDVector3 from, VDVector3 to, VDVector3 color)
+{
+    VDVector3 dir = to - from;
+    float dist = dir.length();
+    dir = dir * (1.0f / dist);
+    VDVector3 dirXZ = { dir.x, 0, dir.z };
+    dirXZ.normalize();
+    float theta = -asinf(dirXZ.z);
+    theta = dirXZ.x <= 0.0f ? (3.14159f - theta) : theta;
+    float psi = atanf(dir.y / sqrtf(dir.x * dir.x + dir.z * dir.z));
+    if (dir.x == 0.0f && dir.z == 0.0f || VDNanAny(dirXZ))
+    {
+        if (dir.y > 0.0f)
+            psi = 3.14159f * 0.5f;
+        else
+            psi = -3.141595f * 0.5f;
+        theta = 0.0f;
+    }
+
+    VDMatrix modelMatrix;
+    modelMatrix = VDTranslation(from);
+    modelMatrix = modelMatrix * VDRotate(VDVector3(0,theta,0));
+    modelMatrix = modelMatrix * VDRotate(VDVector3(0, 0, psi));
+    modelMatrix = modelMatrix * VDScale({ dist, 1, 1 });
+    wireShader.use();
+    wireShader.setUniformVector3("solidColor", color);
+    wireShader.setUniformMatrix4("mvp", modelMatrix * viewProjection);
+    vbLine.bind();
+    vbLine.draw(GL_LINES);
 }
 
 void drawChunkOutline(const VDGrid& chunk, VDVector3 color, bool fill = false)

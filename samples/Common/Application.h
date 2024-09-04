@@ -198,9 +198,15 @@ void initApplication()
         -0.5f, -0.5f, 0.5f
     };
 
+    float lineVerts[] = {
+        0.0f, 0.0f, 0.0f,
+        1.0f, 0.0f, 0.0f
+    };
+
     vbOrigin.init((float*)vertexDataOriginCentered, 36);
     vbPositiveQuadrant.init((float*)vertexDataPositiveQuadrant, 36);
     vbWire.initLines(cubeWireVerts, 24);
+    vbLine.initLines(lineVerts, 2);
 
 
     stbi_set_flip_vertically_on_load(true);
