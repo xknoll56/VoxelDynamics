@@ -883,6 +883,7 @@ void drawSolidAABB(const VDAABB& aabb, VDVector3 color)
     shader.setUniformVector3("solidColor", color);
     VDMatrix model = VDScale(aabb.halfExtents*2.0f) * VDTranslation(aabb.position);
     shader.setUniformMatrix4("mvp", model * viewProjection);
+    shader.setUniformMatrix4("model", model );
     vbOrigin.bind();
     vbOrigin.draw();
 }
@@ -935,11 +936,7 @@ void drawLine(VDVector3 from, VDVector3 to, VDVector3 color)
         theta = 0.0f;
     }
 
-    VDMatrix modelMatrix;
-    modelMatrix = VDTranslation(from);
-    modelMatrix = modelMatrix * VDRotate(VDVector3(0,theta,0));
-    modelMatrix = modelMatrix * VDRotate(VDVector3(0, 0, psi));
-    modelMatrix = modelMatrix * VDScale({ dist, 1, 1 });
+    VDMatrix modelMatrix = VDScale({ dist, 1, 1 }) *VDRotate(VDVector3(0, 0, psi))* VDRotate(VDVector3(0, theta, 0)) * VDTranslation(from);
     wireShader.use();
     wireShader.setUniformVector3("solidColor", color);
     wireShader.setUniformMatrix4("mvp", modelMatrix * viewProjection);

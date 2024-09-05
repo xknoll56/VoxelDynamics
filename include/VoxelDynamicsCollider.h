@@ -239,10 +239,23 @@ struct VDAABB
 	}
 };
 
+enum VDOctant
+{
+	LEFT_DOWN_BACK = 0,
+	RIGHT_DOWN_BACK = 1,
+	LEFT_DOWN_FORWARD = 2,
+	RIGHT_DOWN_FORWARD = 3,
+	LEFT_UP_BACK = 4,
+	RIGHT_UP_BACK = 5,
+	LEFT_UP_FORWARD = 6,
+	RIGHT_UP_FORWARD = 7,
+};
+
 struct VDOBB : VDAABB
 {
 	VDQuaternion rotation;
 	VDFrame frame;
+	VDVector3 vertices[8];
 
 	VDOBB() : VDAABB(VDVector3::half()*-1.0f, VDVector3::half())
 	{
@@ -280,6 +293,18 @@ struct VDOBB : VDAABB
 			absRight.z * halfExtents.x + absUp.z * halfExtents.y + absForward.z * halfExtents.z);
 		low = position - curHalfExtents;
 		high = position + curHalfExtents;
+	}
+
+	void setVertices()
+	{
+		vertices[VDOctant::LEFT_DOWN_BACK] = position - (frame.right * halfExtents.x) - (frame.up * halfExtents.y) - (frame.forward * halfExtents.z);
+		vertices[VDOctant::RIGHT_DOWN_BACK] = position + (frame.right * halfExtents.x) - (frame.up * halfExtents.y) - (frame.forward * halfExtents.z);
+		vertices[VDOctant::LEFT_DOWN_FORWARD] = position - (frame.right * halfExtents.x) - (frame.up * halfExtents.y) + (frame.forward * halfExtents.z);
+		vertices[VDOctant::RIGHT_DOWN_FORWARD] = position + (frame.right * halfExtents.x) - (frame.up * halfExtents.y) + (frame.forward * halfExtents.z);
+		vertices[VDOctant::LEFT_UP_BACK] = position - (frame.right * halfExtents.x) + (frame.up * halfExtents.y) - (frame.forward * halfExtents.z);
+		vertices[VDOctant::RIGHT_UP_BACK] = position + (frame.right * halfExtents.x) + (frame.up * halfExtents.y) - (frame.forward * halfExtents.z);
+		vertices[VDOctant::LEFT_UP_FORWARD] = position - (frame.right * halfExtents.x) + (frame.up * halfExtents.y) + (frame.forward * halfExtents.z);
+		vertices[VDOctant::RIGHT_UP_FORWARD] = position + (frame.right * halfExtents.x) + (frame.up * halfExtents.y) + (frame.forward * halfExtents.z);
 	}
 };
 

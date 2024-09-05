@@ -3,6 +3,8 @@
 
 #include "VoxelDynamicsCollider.h"
 
+#define VD_COLLIDER_TOLERANCE 1e-5
+
 struct VDPenetrationField
 {
 	float maxPenetrations[6];
@@ -27,25 +29,19 @@ struct VDPenetrationField
 
 struct VDContactPoint
 {
-	VDCollider* pContact;
-	VDCollider* pOtherContact;
 	VDVector3 normal;
 	float penetrationDistance;
 	VDVector3 point;
 
 	VDContactPoint()
 	{
-		pContact = nullptr;
-		pOtherContact = nullptr;
 		point = VDVector3();
 		normal = VDVector3();
 		penetrationDistance = 0.0;
 	}
 
-	VDContactPoint(VDCollider* _pContact, VDCollider* _pOtherContact, VDVector3 _point, VDVector3 _normal, float _penetrationDistance)
+	VDContactPoint(VDVector3 _point, VDVector3 _normal, float _penetrationDistance)
 	{
-		pContact = _pContact;
-		pOtherContact = _pOtherContact;
 		normal = _normal;
 		penetrationDistance = _penetrationDistance;
 		point = _point;
@@ -236,5 +232,27 @@ void VDAABB::resolveAABBContact(const VDAABBContact& contact)
 	translate(VDDirectionToVector((VDDirection)contact.minDirections[0]) * penetration);
 }
 
+
+bool VDRayCastPlane(VDVector3 from, VDVector3 dir, VDVector3 planeNormal, VDVector3 pointOnPlane, VDContactPoint& contactPoint)
+{
+	VDVector3 dp = pointOnPlane - from;
+	contactPoint.normal = planeNormal;
+	float dpDotNormal = VDDot(dp, contactPoint.normal);
+	if (VDAbs(dpDotNormal) < VD_COLLIDER_TOLERANCE)
+	{
+		contactPoint.normal = planeNormal;
+		contactPoint.penetrationDistance = 0.0f;
+		contactPoint.point = pointOnPlane;
+		return true;
+	}
+	float dirDotNormal = VDDot(dir, planeNormal);
+	contactPoint.penetrationDistance = dpDotNormal / dirDotNormal;
+	contactPoint.point = from + dir*contactPoint.penetrationDistance;
+	if (dpDotNormal > 0.0f)
+	{
+		contactPoint.normal = planeNormal * -1.0f;
+	}
+	return contactPoint.penetrationDistance > 0.0f;
+}
 
 #endif

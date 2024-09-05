@@ -94,8 +94,7 @@ struct VDSimulation
 		{
 			if (penetrationsField.maxPenetrations[i] > 0.0f)
 			{
-				contactPoints.insert(VDContactPoint((VDPointer)&aabb, penetrationsField.pVoxels[i],
-					aabb.position, VDDirectionToVector((VDDirection)i), penetrationsField.maxPenetrations[i]));
+				contactPoints.insert(VDContactPoint(aabb.position, VDDirectionToVector((VDDirection)i), penetrationsField.maxPenetrations[i]));
 			}
 		}
 	}
@@ -160,9 +159,8 @@ struct VDSimulation
 			pBody->setSleeping(true);
 	}
 
-	void resolveAABBDynamicBodyContact(VDBody* pBody, const VDContactPoint& contactPoint, float dt)
+	void resolveAABBDynamicBodyContact(VDBody* pBody, VDBody* pOtherBody, const VDContactPoint& contactPoint, float dt)
 	{
-		VDBody* pOtherBody = (VDBody*)contactPoint.pOtherContact;
 		pBody->translate(contactPoint.normal * contactPoint.penetrationDistance*0.5f);
 		pOtherBody->translate(contactPoint.normal * -contactPoint.penetrationDistance * 0.5f);
 
@@ -220,9 +218,9 @@ struct VDSimulation
 						VDVector3 quadrantDir = VDSign(it->item->position - pAABBCollider->position);
 						VDAABBContact contact((VDPointer)it->item, (VDPointer)collIt->item, intersectionRegion, quadrantDir);
 						contact.setPenetrations();
-						VDContactPoint contactPoint((VDPointer)it->item, (VDPointer)collIt->item, intersectionRegion.position,
+						VDContactPoint contactPoint(intersectionRegion.position,
 							VDDirectionToVector(contact.minDirections[0]), contact.getPenetrationByDirection(contact.minDirections[0]));
-						resolveAABBDynamicBodyContact(it->item, contactPoint, dt);
+						resolveAABBDynamicBodyContact(it->item, collIt->item, contactPoint, dt);
 						if (contact.intersectionRegion.position.y < it->item->position.y && contact.intersectionRegion.crossSection(VDDirection::UP)>0.05f)
 							hasIntersection = true;
 					}
