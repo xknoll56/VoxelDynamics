@@ -5,10 +5,12 @@ struct HellBoxScene : Scene
 {
 
     VDOBB box;
+    VDImplicitPlane plane;
     void init() override
     {
         box.setHalfExtents(VDVector3(0.5, 1, 1.5));
         box.setPosition({ 4,4,4 });
+        plane = VDImplicitPlane(VDVector3(), VDVector3(1, 1, 1), 5.0f, 8.0f, 0.45f);
     }
 
     void update(float dt) override
@@ -27,12 +29,13 @@ struct HellBoxScene : Scene
         drawAABB(box, colorGreen);
         drawBoxFrame(box, 3.0f);
 
-        VDContactPoint point;
-        if (VDRayCastPlane(VDVector3(0, 10, 0), VDNormalize(VDVector3(cosf(elapsedTime)*0.5f, -1, sinf(elapsedTime)*0.5f)),
-            VDVector3::up(), VDVector3(), point))
+        VDContactInfo point;
+        if (VDRayCastImplicitPlane(VDVector3(1, 10, 5), VDVector3(0, -1,0), plane, point))
         {
             drawLine(VDVector3(0, 10, 0), point.point, colorGreen);
+            drawBox(point.point, VDVector3(), VDVector3::one() * 0.1f, colorGreen);
         }
+        drawImplicitPlane(plane, colorWhite);
     }
 };
 

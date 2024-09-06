@@ -641,26 +641,27 @@ struct VDFrame
         return *this;
     }
 
-    VDMatrix toRotationMatrix()
+    VDMatrix toRotationMatrix() const
     {
         VDMatrix mat;
         mat.m[0][0] = right.x;
-        mat.m[1][0] = right.y;
-        mat.m[2][0] = right.z;
-        mat.m[0][1] = up.x;
+        mat.m[0][1] = right.y;
+        mat.m[0][2] = right.z;
+        mat.m[1][0] = up.x;
         mat.m[1][1] = up.y;
-        mat.m[2][1] = up.z;
-        mat.m[0][2] = forward.x;
-        mat.m[1][2] = forward.y;
-        mat.m[2][2] = forward.z;
+        mat.m[1][2] = up.z;
+        mat.m[2][0] = -forward.x;  // Negate forward for LH system
+        mat.m[2][1] = -forward.y;  // Negate forward for LH system
+        mat.m[2][2] = -forward.z;  // Negate forward for LH system
         return mat;
     }
 
+
     static VDFrame fromRotationMatrix(VDMatrix mat)
     {
-        VDFrame frame(VDVector3(mat.m[0][0], mat.m[1][0], mat.m[2][0]),
-            VDVector3(mat.m[0][1], mat.m[1][1], mat.m[2][1]),
-            VDVector3(mat.m[0][2], mat.m[1][2], mat.m[2][2]));
+        VDFrame frame(VDVector3(mat.m[0][0], mat.m[0][1], mat.m[0][2]),
+            VDVector3(mat.m[1][0], mat.m[1][1], mat.m[1][2]),
+            VDVector3(mat.m[2][0], mat.m[2][1], mat.m[2][2]));
     }
 
     void normalizeAxes()
@@ -766,7 +767,7 @@ struct VDQuaternion
         return frame;
     }
 
-    VDMatrix toMatrix(bool rh = true)
+    VDMatrix toMatrix(bool rh = true) const
     {
         VDMatrix mr;
 

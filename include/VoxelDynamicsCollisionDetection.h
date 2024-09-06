@@ -27,20 +27,20 @@ struct VDPenetrationField
 };
 
 
-struct VDContactPoint
+struct VDContactInfo
 {
 	VDVector3 normal;
 	float penetrationDistance;
 	VDVector3 point;
 
-	VDContactPoint()
+	VDContactInfo()
 	{
 		point = VDVector3();
 		normal = VDVector3();
 		penetrationDistance = 0.0;
 	}
 
-	VDContactPoint(VDVector3 _point, VDVector3 _normal, float _penetrationDistance)
+	VDContactInfo(VDVector3 _point, VDVector3 _normal, float _penetrationDistance)
 	{
 		normal = _normal;
 		penetrationDistance = _penetrationDistance;
@@ -233,7 +233,7 @@ void VDAABB::resolveAABBContact(const VDAABBContact& contact)
 }
 
 
-bool VDRayCastPlane(VDVector3 from, VDVector3 dir, VDVector3 planeNormal, VDVector3 pointOnPlane, VDContactPoint& contactPoint)
+bool VDRayCastPlane(VDVector3 from, VDVector3 dir, VDVector3 planeNormal, VDVector3 pointOnPlane, VDContactInfo& contactPoint)
 {
 	VDVector3 dp = pointOnPlane - from;
 	contactPoint.normal = planeNormal;
@@ -254,5 +254,22 @@ bool VDRayCastPlane(VDVector3 from, VDVector3 dir, VDVector3 planeNormal, VDVect
 	}
 	return contactPoint.penetrationDistance > 0.0f;
 }
+
+bool VDRayCastImplicitPlane(VDVector3 from, VDVector3 dir, const VDImplicitPlane& plane, VDContactInfo& contactInfo)
+{
+	if (VDRayCastPlane(from, dir, plane.frame.up, plane.center, contactInfo))
+	{
+		VDVector3 dp = contactInfo.point - plane.center;
+		float rightDist = VDDot(plane.frame.right, dp);
+		float forwardDist = VDDot(plane.frame.forward, dp);
+		if (VDAbs(rightDist) <= plane.rightHalfSize && VDAbs(forwardDist) <= plane.forwardHalfSize)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+
 
 #endif

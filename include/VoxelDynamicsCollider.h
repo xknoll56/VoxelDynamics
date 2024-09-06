@@ -251,6 +251,58 @@ enum VDOctant
 	RIGHT_UP_FORWARD = 7,
 };
 
+struct VDImplicitPlane
+{
+	VDVector3 center;
+	VDFrame frame;
+	float rightHalfSize;
+	float forwardHalfSize;
+	float angle;
+
+	VDImplicitPlane()
+	{
+		center = VDVector3();
+		frame = VDFrame();
+		rightHalfSize = 5.0f;
+		forwardHalfSize = 5.0f;
+		angle = 0.0f;
+	}
+
+	VDImplicitPlane(VDVector3 _center, VDVector3 _normal, float _rightHalfSize, float _forwardHalfSize, float _angle)
+	{
+		center = _center;
+		frame.up = VDNormalize(_normal);
+		angle = _angle;
+		float dot = VDDot(frame.up, VDVector3::forward());
+		if (dot == 1.0f)
+			frame.right = VDVector3::right();
+		else if (dot == -1.0f)
+			frame.right = VDVector3::left();
+		else
+			frame.right = VDNormalize(VDCross(frame.up, VDVector3::forward()));
+		VDQuaternion rotation = VDQuaternion::fromAngleAxis(frame.up, angle);
+		frame.right = rotation.rotatePoint(frame.right);
+		frame.forward = VDCross(frame.right, frame.up);
+		rightHalfSize = _rightHalfSize;
+		forwardHalfSize = _forwardHalfSize;
+	}
+
+	VDImplicitPlane& operator=(const VDImplicitPlane& other)
+	{
+		if (&other != this)
+		{
+			center = other.center;
+			frame.up = other.frame.up;
+			frame.right = other.frame.right;
+			rightHalfSize = other.rightHalfSize;
+			frame.forward = other.frame.forward;
+			forwardHalfSize = other.forwardHalfSize;
+			angle = other.angle;
+		}
+		return *this;
+	}
+};
+
 struct VDOBB : VDAABB
 {
 	VDQuaternion rotation;

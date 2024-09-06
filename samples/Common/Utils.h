@@ -286,6 +286,7 @@ VertexBuffer vbOrigin;
 VertexBuffer vbPositiveQuadrant;
 VertexBuffer vbWire;
 VertexBuffer vbLine;
+VertexBuffer vbPlane;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     WINDOW_WIDTH = width;
@@ -813,9 +814,34 @@ void drawVertexBuffer(const VertexBuffer& vertexBuffer, VDVector3 translation, V
     shader.setUniformFloat("colorMix", 1.0f);
     shader.setUniformVector3("solidColor", color);
     VDMatrix model =  VDScale(scale) * VDRotate(euler) * VDTranslation(translation);
+    shader.setUniformMatrix4("model", model);
     shader.setUniformMatrix4("mvp", model * viewProjection);
     vertexBuffer.bind();
     vertexBuffer.draw(mode);
+}
+
+void drawVertexBuffer(const VertexBuffer& vertexBuffer, const VDVector3& translation, const VDQuaternion& rotation, const VDVector3& scale, const VDVector3& color)
+{
+    shader.use();
+    shader.setUniformFloat("colorMix", 1.0f);
+    shader.setUniformVector3("solidColor", color);
+    VDMatrix model = VDScale(scale) * rotation.toMatrix() * VDTranslation(translation);
+    shader.setUniformMatrix4("model", model);
+    shader.setUniformMatrix4("mvp", model * viewProjection);
+    vertexBuffer.bind();
+    vertexBuffer.draw();
+}
+
+void drawVertexBuffer(const VertexBuffer& vertexBuffer, const VDVector3& translation, const VDMatrix& rotationMatrix, const VDVector3& scale, const VDVector3& color)
+{
+    shader.use();
+    shader.setUniformFloat("colorMix", 1.0f);
+    shader.setUniformVector3("solidColor", color);
+    VDMatrix model = VDScale(scale) * rotationMatrix * VDTranslation(translation);
+    shader.setUniformMatrix4("model", model);
+    shader.setUniformMatrix4("mvp", model * viewProjection);
+    vertexBuffer.bind();
+    vertexBuffer.draw();
 }
 
 void drawBox(const VDMatrix& model, const VDVector3& color, bool fill)
@@ -942,6 +968,11 @@ void drawLine(VDVector3 from, VDVector3 to, VDVector3 color)
     wireShader.setUniformMatrix4("mvp", modelMatrix * viewProjection);
     vbLine.bind();
     vbLine.draw(GL_LINES);
+}
+
+void drawImplicitPlane(const VDImplicitPlane& plane, VDVector3 color)
+{
+    drawVertexBuffer(vbPlane, plane.center, plane.frame.toRotationMatrix(), VDVector3(plane.rightHalfSize*2.0f, 1.0f, plane.forwardHalfSize*2.0f), color);
 }
 
 void drawChunkOutline(const VDGrid& chunk, VDVector3 color, bool fill = false)

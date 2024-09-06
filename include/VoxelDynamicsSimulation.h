@@ -53,7 +53,7 @@ struct VDSimulation
 		return pAgent;
 	}
 
-	void multiVoxelContactResolution(VDAABB& aabb, const VDList<VDVoxel*>& voxels, VDPenetrationField& penetrationsField, VDList<VDContactPoint>& contactPoints) const
+	void multiVoxelContactResolution(VDAABB& aabb, const VDList<VDVoxel*>& voxels, VDPenetrationField& penetrationsField, VDList<VDContactInfo>& contactPoints) const
 	{
 		VDuint chunkIndex = 0;
 		VDVector3i chunkCoords;
@@ -94,7 +94,7 @@ struct VDSimulation
 		{
 			if (penetrationsField.maxPenetrations[i] > 0.0f)
 			{
-				contactPoints.insert(VDContactPoint(aabb.position, VDDirectionToVector((VDDirection)i), penetrationsField.maxPenetrations[i]));
+				contactPoints.insert(VDContactInfo(aabb.position, VDDirectionToVector((VDDirection)i), penetrationsField.maxPenetrations[i]));
 			}
 		}
 	}
@@ -121,7 +121,7 @@ struct VDSimulation
 			}
 		}
 		VDPenetrationField field;
-		VDList<VDContactPoint> voxelContactPoints(true);
+		VDList<VDContactInfo> voxelContactPoints(true);
 		multiVoxelContactResolution(agent, sampledVoxels, field, voxelContactPoints);
 		for (auto it = voxelContactPoints.pFirst; it != nullptr; it = it->pNext)
 		{
@@ -142,7 +142,7 @@ struct VDSimulation
 			updateAgent(agentIt->item, space, dt);
 	}
 
-	void resolveAABBStaticBodyContact(VDBody* pBody, const VDContactPoint& contactPoint, float dt)
+	void resolveAABBStaticBodyContact(VDBody* pBody, const VDContactInfo& contactPoint, float dt)
 	{
 		pBody->translate(contactPoint.normal * contactPoint.penetrationDistance);
 		VDVector3 vn = contactPoint.normal * VDDot(contactPoint.normal, pBody->velocity) * -1.0f;
@@ -159,7 +159,7 @@ struct VDSimulation
 			pBody->setSleeping(true);
 	}
 
-	void resolveAABBDynamicBodyContact(VDBody* pBody, VDBody* pOtherBody, const VDContactPoint& contactPoint, float dt)
+	void resolveAABBDynamicBodyContact(VDBody* pBody, VDBody* pOtherBody, const VDContactInfo& contactPoint, float dt)
 	{
 		pBody->translate(contactPoint.normal * contactPoint.penetrationDistance*0.5f);
 		pOtherBody->translate(contactPoint.normal * -contactPoint.penetrationDistance * 0.5f);
@@ -218,7 +218,7 @@ struct VDSimulation
 						VDVector3 quadrantDir = VDSign(it->item->position - pAABBCollider->position);
 						VDAABBContact contact((VDPointer)it->item, (VDPointer)collIt->item, intersectionRegion, quadrantDir);
 						contact.setPenetrations();
-						VDContactPoint contactPoint(intersectionRegion.position,
+						VDContactInfo contactPoint(intersectionRegion.position,
 							VDDirectionToVector(contact.minDirections[0]), contact.getPenetrationByDirection(contact.minDirections[0]));
 						resolveAABBDynamicBodyContact(it->item, collIt->item, contactPoint, dt);
 						if (contact.intersectionRegion.position.y < it->item->position.y && contact.intersectionRegion.crossSection(VDDirection::UP)>0.05f)
@@ -231,7 +231,7 @@ struct VDSimulation
 				it->item->sleeping = false;
 			}
 			VDPenetrationField field;
-			VDList<VDContactPoint> voxelContactPoints(true);
+			VDList<VDContactInfo> voxelContactPoints(true);
 			multiVoxelContactResolution(*it->item, sampledVoxels, field, voxelContactPoints);
 			for (auto cpIt = voxelContactPoints.pFirst; cpIt != nullptr; cpIt = cpIt->pNext)
 			{
