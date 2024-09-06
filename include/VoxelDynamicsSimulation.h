@@ -125,7 +125,7 @@ struct VDSimulation
 		multiVoxelContactResolution(agent, sampledVoxels, field, voxelContactPoints);
 		for (auto it = voxelContactPoints.pFirst; it != nullptr; it = it->pNext)
 		{
-			agent.translate(it->item.normal*it->item.penetrationDistance);
+			agent.translate(it->item.normal*it->item.distance);
 		}
 		if (field.maxPenetrations[VDDirection::UP] > 0.0f)
 		{
@@ -144,7 +144,7 @@ struct VDSimulation
 
 	void resolveAABBStaticBodyContact(VDBody* pBody, const VDContactInfo& contactPoint, float dt)
 	{
-		pBody->translate(contactPoint.normal * contactPoint.penetrationDistance);
+		pBody->translate(contactPoint.normal * contactPoint.distance);
 		VDVector3 vn = contactPoint.normal * VDDot(contactPoint.normal, pBody->velocity) * -1.0f;
 		pBody->deltaMomentums.insert(vn * pBody->mass * pBody->restitution );
 		VDVector3 normalVelocity = VDNormalComponent(pBody->velocity, contactPoint.normal);
@@ -161,8 +161,8 @@ struct VDSimulation
 
 	void resolveAABBDynamicBodyContact(VDBody* pBody, VDBody* pOtherBody, const VDContactInfo& contactPoint, float dt)
 	{
-		pBody->translate(contactPoint.normal * contactPoint.penetrationDistance*0.5f);
-		pOtherBody->translate(contactPoint.normal * -contactPoint.penetrationDistance * 0.5f);
+		pBody->translate(contactPoint.normal * contactPoint.distance *0.5f);
+		pOtherBody->translate(contactPoint.normal * -contactPoint.distance * 0.5f);
 
 		VDVector3 vRel = (pOtherBody->velocity - pBody->velocity);
 		VDVector3 vn = contactPoint.normal * VDDot(contactPoint.normal, vRel);

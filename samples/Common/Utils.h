@@ -793,19 +793,21 @@ void moveAgentWithArrows(const Camera& camera, VDAgentController& agent, float d
 
 
 
-void drawTranslatedVertexBuffer(const VertexBuffer& vertexBuffer, VDVector3 translation, VDVector3 color)
+void drawTranslatedVertexBuffer(const VertexBuffer& vertexBuffer, VDVector3 translation, VDVector3 color, VDVector3 scale = VDVector3::one())
 {
     shader.use();
     shader.setUniformFloat("colorMix", 1.0f);
     shader.setUniformVector3("solidColor", color);
-    shader.setUniformMatrix4("mvp", VDTranslation(translation)*viewProjection);
+    VDMatrix model = VDScale(scale) * VDTranslation(translation);
+    shader.setUniformMatrix4("model", model);
+    shader.setUniformMatrix4("mvp", model*viewProjection);
     vertexBuffer.bind();
     vertexBuffer.draw();
 }
 
-void drawTranslatedBox(VDVector3 translation, VDVector3 color)
+void drawTranslatedBox(VDVector3 translation, VDVector3 color, VDVector3 scale = VDVector3::one())
 {
-    drawTranslatedVertexBuffer(vbOrigin, translation, color);
+    drawTranslatedVertexBuffer(vbOrigin, translation, color, scale);
 }
 
 void drawVertexBuffer(const VertexBuffer& vertexBuffer, VDVector3 translation, VDVector3 euler, VDVector3 scale, VDVector3 color, GLenum mode = GL_TRIANGLES)

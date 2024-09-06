@@ -30,20 +30,20 @@ struct VDPenetrationField
 struct VDContactInfo
 {
 	VDVector3 normal;
-	float penetrationDistance;
+	float distance;
 	VDVector3 point;
 
 	VDContactInfo()
 	{
 		point = VDVector3();
 		normal = VDVector3();
-		penetrationDistance = 0.0;
+		distance = 0.0;
 	}
 
-	VDContactInfo(VDVector3 _point, VDVector3 _normal, float _penetrationDistance)
+	VDContactInfo(VDVector3 _point, VDVector3 _normal, float _distance)
 	{
 		normal = _normal;
-		penetrationDistance = _penetrationDistance;
+		distance = _distance;
 		point = _point;
 	}
 };
@@ -241,29 +241,69 @@ bool VDRayCastPlane(VDVector3 from, VDVector3 dir, VDVector3 planeNormal, VDVect
 	if (VDAbs(dpDotNormal) < VD_COLLIDER_TOLERANCE)
 	{
 		contactPoint.normal = planeNormal;
-		contactPoint.penetrationDistance = 0.0f;
+		contactPoint.distance = 0.0f;
 		contactPoint.point = pointOnPlane;
 		return true;
 	}
 	float dirDotNormal = VDDot(dir, planeNormal);
-	contactPoint.penetrationDistance = dpDotNormal / dirDotNormal;
-	contactPoint.point = from + dir*contactPoint.penetrationDistance;
+	contactPoint.distance = dpDotNormal / dirDotNormal;
+	contactPoint.point = from + dir*contactPoint.distance;
 	if (dpDotNormal > 0.0f)
 	{
 		contactPoint.normal = planeNormal * -1.0f;
 	}
-	return contactPoint.penetrationDistance > 0.0f;
+	return contactPoint.distance > 0.0f;
+}
+
+bool VDRayCastImplicitPlaneContained(const VDImplicitPlane& plane, VDContactInfo& contactInfo)
+{
+	VDVector3 dp = contactInfo.point - plane.center;
+	float rightDist = VDDot(plane.frame.right, dp);
+	float forwardDist = VDDot(plane.frame.forward, dp);
+	if (VDAbs(rightDist) <= plane.rightHalfSize && VDAbs(forwardDist) <= plane.forwardHalfSize)
+	{
+		return true;
+	}
+	return false;
 }
 
 bool VDRayCastImplicitPlane(VDVector3 from, VDVector3 dir, const VDImplicitPlane& plane, VDContactInfo& contactInfo)
 {
 	if (VDRayCastPlane(from, dir, plane.frame.up, plane.center, contactInfo))
 	{
-		VDVector3 dp = contactInfo.point - plane.center;
-		float rightDist = VDDot(plane.frame.right, dp);
-		float forwardDist = VDDot(plane.frame.forward, dp);
-		if (VDAbs(rightDist) <= plane.rightHalfSize && VDAbs(forwardDist) <= plane.forwardHalfSize)
+		return VDRayCastImplicitPlaneContained(plane, contactInfo);
+	}
+	return false;
+}
+
+bool VDRayCastAABB(VDVector3 from, VDVector3 dir, const VDAABB& aabb, VDContactInfo& contactInfo)
+{
+	VDVector3 dp = aabb.position - from;
+	float dot = VDDot(dp, dir);
+	if (dot >= 0.0f)
+	{
+		VDImplicitPlane xPlane = dir.x > 0.0f ? aabb.directionToImplicitPlane(VDDirection::LEFT) : aabb.directionToImplicitPlane(VDDirection::RIGHT);
+		if (VDRayCastImplicitPlane(from, dir, xPlane, contactInfo))
+			return true;
+		else if (contactInfo.distance < 0.0f)
 		{
+			contactInfo = VDContactInfo(from, contactInfo.normal, 0.0f);
+			return true;
+		}
+		VDImplicitPlane yPlane = dir.y > 0.0f ? aabb.directionToImplicitPlane(VDDirection::DOWN) : aabb.directionToImplicitPlane(VDDirection::UP);
+		if (VDRayCastImplicitPlane(from, dir, yPlane, contactInfo))
+			return true;
+		else if (contactInfo.distance < 0.0f)
+		{
+			contactInfo = VDContactInfo(from, contactInfo.normal, 0.0f);
+			return true;
+		}
+		VDImplicitPlane zPlane = dir.z > 0.0f ? aabb.directionToImplicitPlane(VDDirection::BACK) : aabb.directionToImplicitPlane(VDDirection::FORWARD);
+		if (VDRayCastImplicitPlane(from, dir, zPlane, contactInfo))
+			return true;
+		else if (contactInfo.distance < 0.0f)
+		{
+			contactInfo = VDContactInfo(from, contactInfo.normal, 0.0f);
 			return true;
 		}
 	}

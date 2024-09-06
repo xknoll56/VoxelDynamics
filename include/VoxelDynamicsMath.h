@@ -179,6 +179,26 @@ struct VDVector3
     {
         return VDVector3(0.5f, 0.5f, 0.5f);
     }
+
+    static VDVector3 uniformScale(float s)
+    {
+        return VDVector3(s, s, s);
+    }
+
+    VDVector3 xComponentVector() const
+    {
+        return VDVector3(x, 0, 0);
+    }
+
+    VDVector3 yComponentVector() const
+    {
+        return VDVector3(0, y, 0);
+    }
+
+    VDVector3 zComponentVector() const
+    {
+        return VDVector3(0, 0, z);
+    }
 };
 
 struct VDVector3i

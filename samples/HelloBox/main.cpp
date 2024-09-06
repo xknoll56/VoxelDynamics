@@ -33,7 +33,7 @@ struct HellBoxScene : Scene
         if (VDRayCastImplicitPlane(VDVector3(1, 10, 5), VDVector3(0, -1,0), plane, point))
         {
             drawLine(VDVector3(0, 10, 0), point.point, colorGreen);
-            drawBox(point.point, VDVector3(), VDVector3::one() * 0.1f, colorGreen);
+            drawTranslatedBox(point.point, colorGreen, VDVector3::uniformScale(0.25f));
         }
         drawImplicitPlane(plane, colorWhite);
     }

@@ -14,6 +14,31 @@ enum VDDirection
 	BACK
 };
 
+VDDirection VDDirectionOpposite(VDDirection dir)
+{
+	switch (dir)
+	{
+	case VDDirection::RIGHT:
+		return VDDirection::LEFT;
+		break;
+	case VDDirection::LEFT:
+		return VDDirection::RIGHT;
+		break;
+	case VDDirection::UP:
+		return VDDirection::DOWN;
+		break;
+	case VDDirection::DOWN:
+		return VDDirection::UP;
+		break;
+	case VDDirection::FORWARD:
+		return VDDirection::BACK;
+		break;
+	case VDDirection::BACK:
+		return VDDirection::FORWARD;
+		break;
+	}
+}
+
 VDVector3 VDDirectionToVector(VDDirection dir)
 {
 	switch (dir)
@@ -94,6 +119,62 @@ struct VDAABBContact;
 
 
 struct VDVoxel;
+
+struct VDImplicitPlane
+{
+	VDVector3 center;
+	VDFrame frame;
+	float rightHalfSize;
+	float forwardHalfSize;
+
+	VDImplicitPlane()
+	{
+		center = VDVector3();
+		frame = VDFrame();
+		rightHalfSize = 5.0f;
+		forwardHalfSize = 5.0f;
+	}
+
+	VDImplicitPlane(VDVector3 _center, VDVector3 _normal, float _rightHalfSize, float _forwardHalfSize, float angle)
+	{
+		center = _center;
+		frame.up = VDNormalize(_normal);
+		float dot = VDDot(frame.up, VDVector3::forward());
+		if (dot == 1.0f)
+			frame.right = VDVector3::right();
+		else if (dot == -1.0f)
+			frame.right = VDVector3::left();
+		else
+			frame.right = VDNormalize(VDCross(frame.up, VDVector3::forward()));
+		VDQuaternion rotation = VDQuaternion::fromAngleAxis(frame.up, angle);
+		frame.right = rotation.rotatePoint(frame.right);
+		frame.forward = VDCross(frame.right, frame.up);
+		rightHalfSize = _rightHalfSize;
+		forwardHalfSize = _forwardHalfSize;
+	}
+
+	VDImplicitPlane(VDVector3 _center, VDFrame _frame, float _rightHalfSize, float _forwardHalfSize)
+	{
+		center = _center;
+		frame = _frame;
+		rightHalfSize = _rightHalfSize;
+		forwardHalfSize = _forwardHalfSize;
+	}
+
+	VDImplicitPlane& operator=(const VDImplicitPlane& other)
+	{
+		if (&other != this)
+		{
+			center = other.center;
+			frame.up = other.frame.up;
+			frame.right = other.frame.right;
+			rightHalfSize = other.rightHalfSize;
+			frame.forward = other.frame.forward;
+			forwardHalfSize = other.forwardHalfSize;
+		}
+		return *this;
+	}
+};
 
 struct VDAABB
 {
@@ -237,6 +318,37 @@ struct VDAABB
 			break;
 		}
 	}
+
+	VDImplicitPlane directionToImplicitPlane(VDDirection dir) const
+	{
+		switch (dir)
+		{
+		case VDDirection::RIGHT:
+			return VDImplicitPlane(position + halfExtents.xComponentVector(),
+				VDFrame(VDVector3::up(), VDVector3::right(), VDVector3::forward()), halfExtents.y, halfExtents.z);
+			break;
+		case VDDirection::LEFT:
+			return VDImplicitPlane(position - halfExtents.xComponentVector(),
+				VDFrame(VDVector3::up(), VDVector3::left(), VDVector3::forward()), halfExtents.y, halfExtents.z);
+			break;
+		case VDDirection::UP:
+			return VDImplicitPlane(position + halfExtents.yComponentVector(),
+				VDFrame(VDVector3::right(), VDVector3::up(), VDVector3::forward()), halfExtents.x, halfExtents.z);
+				break;
+		case VDDirection::DOWN:
+			return VDImplicitPlane(position - halfExtents.yComponentVector(),
+				VDFrame(VDVector3::right(), VDVector3::down(), VDVector3::forward()), halfExtents.x, halfExtents.z);
+			break;
+		case VDDirection::FORWARD:
+			return VDImplicitPlane(position + halfExtents.zComponentVector(),
+				VDFrame(VDVector3::right(), VDVector3::forward(), VDVector3::up()), halfExtents.x, halfExtents.y);
+			break;
+		case VDDirection::BACK:
+			return VDImplicitPlane(position - halfExtents.zComponentVector(),
+				VDFrame(VDVector3::right(), VDVector3::back(), VDVector3::up()), halfExtents.x, halfExtents.y);
+			break;
+		}
+	}
 };
 
 enum VDOctant
@@ -251,57 +363,7 @@ enum VDOctant
 	RIGHT_UP_FORWARD = 7,
 };
 
-struct VDImplicitPlane
-{
-	VDVector3 center;
-	VDFrame frame;
-	float rightHalfSize;
-	float forwardHalfSize;
-	float angle;
 
-	VDImplicitPlane()
-	{
-		center = VDVector3();
-		frame = VDFrame();
-		rightHalfSize = 5.0f;
-		forwardHalfSize = 5.0f;
-		angle = 0.0f;
-	}
-
-	VDImplicitPlane(VDVector3 _center, VDVector3 _normal, float _rightHalfSize, float _forwardHalfSize, float _angle)
-	{
-		center = _center;
-		frame.up = VDNormalize(_normal);
-		angle = _angle;
-		float dot = VDDot(frame.up, VDVector3::forward());
-		if (dot == 1.0f)
-			frame.right = VDVector3::right();
-		else if (dot == -1.0f)
-			frame.right = VDVector3::left();
-		else
-			frame.right = VDNormalize(VDCross(frame.up, VDVector3::forward()));
-		VDQuaternion rotation = VDQuaternion::fromAngleAxis(frame.up, angle);
-		frame.right = rotation.rotatePoint(frame.right);
-		frame.forward = VDCross(frame.right, frame.up);
-		rightHalfSize = _rightHalfSize;
-		forwardHalfSize = _forwardHalfSize;
-	}
-
-	VDImplicitPlane& operator=(const VDImplicitPlane& other)
-	{
-		if (&other != this)
-		{
-			center = other.center;
-			frame.up = other.frame.up;
-			frame.right = other.frame.right;
-			rightHalfSize = other.rightHalfSize;
-			frame.forward = other.frame.forward;
-			forwardHalfSize = other.forwardHalfSize;
-			angle = other.angle;
-		}
-		return *this;
-	}
-};
 
 struct VDOBB : VDAABB
 {
@@ -358,6 +420,7 @@ struct VDOBB : VDAABB
 		vertices[VDOctant::LEFT_UP_FORWARD] = position - (frame.right * halfExtents.x) + (frame.up * halfExtents.y) + (frame.forward * halfExtents.z);
 		vertices[VDOctant::RIGHT_UP_FORWARD] = position + (frame.right * halfExtents.x) + (frame.up * halfExtents.y) + (frame.forward * halfExtents.z);
 	}
+
 };
 
 struct VDCollider : VDAABB
