@@ -377,11 +377,13 @@ struct VDOBB : VDAABB
 	VDQuaternion rotation;
 	VDFrame frame;
 	VDVector3 vertices[8];
+	bool vertsUpdated;
 
 	VDOBB() : VDAABB(VDVector3::half()*-1.0f, VDVector3::half())
 	{
 		rotation = VDQuaternion();
 		frame = rotation.toFrame();
+		setVertices();
 	}
 
 	VDOBB(VDVector3 _position, VDVector3 _halfExtents, VDQuaternion _rotation)
@@ -390,18 +392,27 @@ struct VDOBB : VDAABB
 		setPosition(_position);
 		rotation = _rotation;
 		frame = rotation.toFrame();
+		setVertices();
 	}
 
 	void setRotation(VDQuaternion _rotation)
 	{
 		rotation = _rotation;
 		frame = rotation.toFrame();
+		vertsUpdated = false;
 	}
 
 	void rotate(VDQuaternion _rotation)
 	{
 		rotation.rotate(_rotation);
 		frame = rotation.toFrame();
+		vertsUpdated = false;
+	}
+
+	void setPosition(VDVector3 position)
+	{
+		VDAABB::setPosition(position);
+		vertsUpdated = false;
 	}
 
 	void setLowAndHigh()
@@ -426,8 +437,45 @@ struct VDOBB : VDAABB
 		vertices[VDOctant::RIGHT_UP_BACK] = position + (frame.right * halfExtents.x) + (frame.up * halfExtents.y) - (frame.forward * halfExtents.z);
 		vertices[VDOctant::LEFT_UP_FORWARD] = position - (frame.right * halfExtents.x) + (frame.up * halfExtents.y) + (frame.forward * halfExtents.z);
 		vertices[VDOctant::RIGHT_UP_FORWARD] = position + (frame.right * halfExtents.x) + (frame.up * halfExtents.y) + (frame.forward * halfExtents.z);
+		vertsUpdated = true;
 	}
 
+	VDImplicitPlane directionToImplicitPlane(VDDirection dir) const
+	{
+		switch (dir)
+		{
+		case VDDirection::RIGHT:
+			return VDImplicitPlane(position + frame.right * halfExtents.x,
+				VDFrame(frame.up, frame.right, frame.forward), halfExtents.y, halfExtents.z);
+			break;
+		case VDDirection::LEFT:
+			return VDImplicitPlane(position - frame.right * halfExtents.x,
+				VDFrame(frame.up, -frame.right, frame.forward), halfExtents.y, halfExtents.z);
+			break;
+		case VDDirection::UP:
+			return VDImplicitPlane(position + frame.up*halfExtents.y,
+				VDFrame(frame.right, frame.up, frame.forward), halfExtents.x, halfExtents.z);
+			break;
+		case VDDirection::DOWN:
+			return VDImplicitPlane(position - frame.up*halfExtents.y,
+				VDFrame(frame.right, -frame.up, frame.forward), halfExtents.x, halfExtents.z);
+			break;
+		case VDDirection::FORWARD:
+			return VDImplicitPlane(position + frame.forward*halfExtents.z,
+				VDFrame(frame.right, frame.forward, frame.up), halfExtents.x, halfExtents.y);
+			break;
+		case VDDirection::BACK:
+			return VDImplicitPlane(position - frame.forward * halfExtents.z,
+				VDFrame(frame.right, -frame.forward, frame.up), halfExtents.x, halfExtents.y);
+			break;
+		}
+	}
+
+	bool isPointInOBB(const VDVector3& point) const
+	{
+		VDVector3 dists = VDAbs(frame.localPosition(point, position));
+		return (dists.x <= halfExtents.x && dists.y <= halfExtents.y && dists.z <= halfExtents.z);
+	}
 };
 
 struct VDCollider : VDAABB

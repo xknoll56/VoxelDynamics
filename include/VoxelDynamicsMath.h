@@ -18,16 +18,6 @@ struct VDVector2
 
     VDVector2(const VDVector2& other) : x(other.x), y(other.y){}
 
-    VDVector2& operator=(const VDVector2& other)
-    {
-        if (this != &other)
-        {
-            x = other.x;
-            y = other.y;
-        }
-        return *this;
-    }
-
     VDVector2 operator+(const VDVector2& other) const
     {
         return VDVector2(x + other.x, y + other.y);
@@ -66,17 +56,6 @@ struct VDVector3
 
     VDVector3(const VDVector3i& other);
 
-    VDVector3& operator=(const VDVector3& other)
-    {
-        if (this != &other)
-        {
-            x = other.x;
-            y = other.y;
-            z = other.z;
-        }
-        return *this;
-    }
-
     VDVector3& operator=(const VDVector3i& other);
 
     VDVector3 operator+(const VDVector3& other) const
@@ -100,6 +79,16 @@ struct VDVector3
     VDVector3 operator*(float scalar) const
     {
         return VDVector3(x * scalar, y * scalar, z * scalar);
+    }
+
+    friend VDVector3 operator*(float scalar, const VDVector3& vec)
+    {
+        return VDVector3(vec.x * scalar, vec.y * scalar, vec.z * scalar);
+    } 
+
+    VDVector3 operator-() const
+    {
+        return VDVector3(-x, -y, -z);
     }
 
 
@@ -212,17 +201,6 @@ struct VDVector3i
     VDVector3i(const VDVector3i& other) : x(other.x), y(other.y), z(other.z) {}
 
     VDVector3i(const VDVector3& other) : x((int)other.x), y((int)other.y), z((int)other.z) {}
-
-    VDVector3i& operator=(const VDVector3i& other)
-    {
-        if (this != &other)
-        {
-            x = other.x;
-            y = other.y;
-            z = other.z;
-        }
-        return *this;
-    }
 
     VDVector3i operator+(const VDVector3i& other) const
     {
@@ -690,6 +668,17 @@ struct VDFrame
         up.normalize();
         forward.normalize();
     }
+
+    VDVector3 localPosition(VDVector3 point, VDVector3 frameOrigin) const
+    {
+        VDVector3 dp = point - frameOrigin;
+        return VDVector3(VDDot(right, dp), VDDot(up, dp), VDDot(forward, dp));
+    }
+
+    VDVector3 localDirection(VDVector3 dir) const
+    {
+        return VDVector3(VDDot(right, dir), VDDot(up, dir), VDDot(forward, dir));
+    }
 };
 
 float VDMod(float x, float y)
@@ -723,19 +712,6 @@ struct VDQuaternion
 		x = other.x;
 		y = other.y;
 		z = other.z;
-	}
-
-	VDQuaternion& operator=(const VDQuaternion& other)
-	{
-		if (this != &other)
-		{
-			w = other.w;
-			x = other.x;
-			y = other.y;
-			z = other.z;
-		}
-
-		return *this;
 	}
 
 	static VDQuaternion conjugate(const VDQuaternion& quat)

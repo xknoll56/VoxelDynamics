@@ -36,7 +36,7 @@ struct HellBoxScene : Scene
         drawSolidAABB(rayAABBTest, colorWhite);
         
         movePositionWithArrows(camera, rayCastStart, dt, 2.0f);
-        if (VDRayCastAABB(rayCastStart, VDNormalize(VDVector3() - rayCastStart), rayAABBTest, point))
+        if (VDRayCastOBB(rayCastStart, VDNormalize(box.position - rayCastStart), box, point))
         {
             drawLine(rayCastStart, point.point, colorGreen);
             drawTranslatedBox(point.point, colorGreen, VDVector3::uniformScale(0.1f));

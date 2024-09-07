@@ -212,6 +212,12 @@ struct VDAABBContact
 	}
 };
 
+struct VDBoxManifold
+{
+	VDPointer other;
+	VDContactInfo infos[8];
+};
+
 bool VDAABB::collisionAABB(const VDAABB* pOther, VDAABBContact& contact)
 {
 	VDAABB region;
@@ -294,6 +300,31 @@ bool VDRayCastAABB(VDVector3 from, VDVector3 dir, const VDAABB& aabb, VDContactI
 		if (VDRayCastImplicitPlane(from, dir, yPlane, contactInfo))
 			return true;
 		VDImplicitPlane zPlane = dir.z > 0.0f ? aabb.directionToImplicitPlane(VDDirection::BACK) : aabb.directionToImplicitPlane(VDDirection::FORWARD);
+		if (VDRayCastImplicitPlane(from, dir, zPlane, contactInfo))
+			return true;
+	}
+	return false;
+}
+
+bool VDRayCastOBB(VDVector3 from, VDVector3 dir, const VDOBB& obb, VDContactInfo& contactInfo)
+{
+	if (obb.isPointInOBB(from))
+	{
+		contactInfo = VDContactInfo(from, dir, 0.0f);
+		return true;
+	}
+	VDVector3 dp = obb.position - from;
+	float dot = VDDot(dp, dir);
+	if (dot >= 0.0f)
+	{
+		VDVector3 localDirection = obb.frame.localDirection(dir);
+		VDImplicitPlane xPlane = localDirection.x > 0.0f ? obb.directionToImplicitPlane(VDDirection::LEFT) : obb.directionToImplicitPlane(VDDirection::RIGHT);
+		if (VDRayCastImplicitPlane(from, dir, xPlane, contactInfo))
+			return true;
+		VDImplicitPlane yPlane = localDirection.y > 0.0f ? obb.directionToImplicitPlane(VDDirection::DOWN) : obb.directionToImplicitPlane(VDDirection::UP);
+		if (VDRayCastImplicitPlane(from, dir, yPlane, contactInfo))
+			return true;
+		VDImplicitPlane zPlane = localDirection.z > 0.0f ? obb.directionToImplicitPlane(VDDirection::BACK) : obb.directionToImplicitPlane(VDDirection::FORWARD);
 		if (VDRayCastImplicitPlane(from, dir, zPlane, contactInfo))
 			return true;
 	}
