@@ -6,11 +6,13 @@ struct HellBoxScene : Scene
 
     VDOBB box;
     VDImplicitPlane plane;
+    VDVector3 rayCastStart;
     void init() override
     {
         box.setHalfExtents(VDVector3(0.5, 1, 1.5));
         box.setPosition({ 4,4,4 });
         plane = VDImplicitPlane(VDVector3(), VDVector3(1, 1, 1), 5.0f, 8.0f, 0.45f);
+        rayCastStart = VDVector3(3, 10, 2);
     }
 
     void update(float dt) override
@@ -30,12 +32,15 @@ struct HellBoxScene : Scene
         drawBoxFrame(box, 3.0f);
 
         VDContactInfo point;
-        if (VDRayCastImplicitPlane(VDVector3(1, 10, 5), VDVector3(0, -1,0), plane, point))
+        VDAABB rayAABBTest({ -2,-2,-2 }, { 2,2,2 });
+        drawSolidAABB(rayAABBTest, colorWhite);
+        
+        movePositionWithArrows(camera, rayCastStart, dt, 2.0f);
+        if (VDRayCastAABB(rayCastStart, VDNormalize(VDVector3() - rayCastStart), rayAABBTest, point))
         {
-            drawLine(VDVector3(0, 10, 0), point.point, colorGreen);
-            drawTranslatedBox(point.point, colorGreen, VDVector3::uniformScale(0.25f));
+            drawLine(rayCastStart, point.point, colorGreen);
+            drawTranslatedBox(point.point, colorGreen, VDVector3::uniformScale(0.1f));
         }
-        drawImplicitPlane(plane, colorWhite);
     }
 };
 

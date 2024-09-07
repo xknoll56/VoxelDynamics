@@ -265,11 +265,18 @@ struct VDAABB
 		return high.x >= low.x && high.y >= low.y && high.z >= low.z;
 	}
 
-	bool isIntersecting(const VDAABB& other)
+	bool isIntersecting(const VDAABB& other) const
 	{
 		return (low.x <= other.high.x && high.x >= other.low.x) &&
 			(low.y <= other.high.y && high.y >= other.low.y) &&
 			(low.z <= other.high.z && high.z >= other.low.z);
+	}
+
+	bool isPointInAABB(const VDVector3& point) const
+	{
+		return (point.x >= low.x && point.x <= high.x) &&
+			(point.y >= low.y && point.y <= high.y) &&
+			(point.z >= low.z && point.z <= high.z);
 	}
 
 	bool intersectionRegion(VDAABB other, VDAABB& region)

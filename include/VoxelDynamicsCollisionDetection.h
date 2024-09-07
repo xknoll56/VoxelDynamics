@@ -278,6 +278,11 @@ bool VDRayCastImplicitPlane(VDVector3 from, VDVector3 dir, const VDImplicitPlane
 
 bool VDRayCastAABB(VDVector3 from, VDVector3 dir, const VDAABB& aabb, VDContactInfo& contactInfo)
 {
+	if (aabb.isPointInAABB(from))
+	{
+		contactInfo = VDContactInfo(from, dir, 0.0f);
+		return true;
+	}
 	VDVector3 dp = aabb.position - from;
 	float dot = VDDot(dp, dir);
 	if (dot >= 0.0f)
@@ -285,27 +290,12 @@ bool VDRayCastAABB(VDVector3 from, VDVector3 dir, const VDAABB& aabb, VDContactI
 		VDImplicitPlane xPlane = dir.x > 0.0f ? aabb.directionToImplicitPlane(VDDirection::LEFT) : aabb.directionToImplicitPlane(VDDirection::RIGHT);
 		if (VDRayCastImplicitPlane(from, dir, xPlane, contactInfo))
 			return true;
-		else if (contactInfo.distance < 0.0f)
-		{
-			contactInfo = VDContactInfo(from, contactInfo.normal, 0.0f);
-			return true;
-		}
 		VDImplicitPlane yPlane = dir.y > 0.0f ? aabb.directionToImplicitPlane(VDDirection::DOWN) : aabb.directionToImplicitPlane(VDDirection::UP);
 		if (VDRayCastImplicitPlane(from, dir, yPlane, contactInfo))
 			return true;
-		else if (contactInfo.distance < 0.0f)
-		{
-			contactInfo = VDContactInfo(from, contactInfo.normal, 0.0f);
-			return true;
-		}
 		VDImplicitPlane zPlane = dir.z > 0.0f ? aabb.directionToImplicitPlane(VDDirection::BACK) : aabb.directionToImplicitPlane(VDDirection::FORWARD);
 		if (VDRayCastImplicitPlane(from, dir, zPlane, contactInfo))
 			return true;
-		else if (contactInfo.distance < 0.0f)
-		{
-			contactInfo = VDContactInfo(from, contactInfo.normal, 0.0f);
-			return true;
-		}
 	}
 	return false;
 }
