@@ -4,10 +4,31 @@ project(VoxelDynamics)
 
 # Set platform-specific paths
 if(WIN32)
-    set(GLFW3_INCLUDE "C:/path/to/glfw/include" CACHE PATH "Path to GLFW include")
-    set(GLFW3_LIB "C:/path/to/glfw/lib" CACHE PATH "Path to GLFW lib")
-    set(GLEW_INCLUDE "C:/path/to/glew/include" CACHE PATH "Path to GLEW include")
-    set(GLEW_LIB "C:/path/to/glew/lib" CACHE PATH "Path to GLEW lib")
+    # First, try to use the environment variables if they exist
+    if(NOT DEFINED ENV{GLFW3_INCLUDE})
+        set(GLFW3_INCLUDE "C:/path/to/glfw/include" CACHE PATH "Path to GLFW include")
+    else()
+        set(GLFW3_INCLUDE $ENV{GLFW3_INCLUDE} CACHE PATH "Path to GLFW include (from environment)")
+    endif()
+
+    if(NOT DEFINED ENV{GLFW3_LIB})
+        set(GLFW3_LIB "C:/path/to/glfw/lib" CACHE PATH "Path to GLFW lib")
+    else()
+        set(GLFW3_LIB $ENV{GLFW3_LIB} CACHE PATH "Path to GLFW lib (from environment)")
+    endif()
+
+    if(NOT DEFINED ENV{GLEW_INCLUDE})
+        set(GLEW_INCLUDE "C:/path/to/glew/include" CACHE PATH "Path to GLEW include")
+    else()
+        set(GLEW_INCLUDE $ENV{GLEW_INCLUDE} CACHE PATH "Path to GLEW include (from environment)")
+    endif()
+
+    if(NOT DEFINED ENV{GLEW_LIB})
+        set(GLEW_LIB "C:/path/to/glew/lib" CACHE PATH "Path to GLEW lib")
+    else()
+        set(GLEW_LIB $ENV{GLEW_LIB} CACHE PATH "Path to GLEW lib (from environment)")
+    endif()
+
     set(OPENGL_HINTS "C:/path/to/opengl" CACHE PATH "Path to OpenGL installation")
 endif()
 
@@ -75,3 +96,4 @@ endif()
 add_subdirectory(HelloVoxelDynamics)
 add_subdirectory(HelloBody)
 add_subdirectory(HelloBox)
+add_subdirectory(HelloRaycasting)
