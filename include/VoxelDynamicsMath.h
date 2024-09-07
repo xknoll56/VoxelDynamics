@@ -380,6 +380,11 @@ VDVector3 VDScale(VDVector3 v, float scalar)
 	return VDVector3(v.x * scalar, v.y * scalar, v.z * scalar);
 }
 
+float VDClamp(float value, float low, float high)
+{
+    return VDMax(low, VDMin(value, high));
+}
+
 VDVector3 VDCross(VDVector3 v1, VDVector3 v2)
 {
     return VDVector3(

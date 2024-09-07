@@ -370,6 +370,52 @@ enum VDOctant
 	RIGHT_UP_FORWARD = 7,
 };
 
+struct VDEdge
+{
+	VDVector3 pointFrom;
+	VDVector3 pointTo;
+	VDVector3 dir;
+	float distance;
+
+	VDEdge()
+	{
+		pointFrom = VDVector3::zero();
+		pointTo = VDVector3::right();
+		setDirection();
+	}
+
+	VDEdge(VDVector3 _point1, VDVector3 _point2) 
+	{
+		pointFrom = _point1;
+		pointTo = _point2;
+		setDirection();
+	}
+
+	VDEdge(VDVector3 _pointFrom, VDVector3 _dir, float _distance)
+	{
+		pointFrom = _pointFrom;
+		dir = _dir;
+		distance = _distance;
+		pointTo = pointFrom + distance * dir;
+	}
+
+	VDEdge closestEdgeToPoint(VDVector3 point)
+	{
+		VDVector3 dp = point - pointFrom;
+		float projection = VDDot(dp, dir);
+		float clampedProjection = VDClamp(projection, 0.0f, distance);
+		VDVector3 closestPoint = pointFrom + clampedProjection * dir;
+		return VDEdge(closestPoint, point);
+	}
+
+	void setDirection()
+	{
+		VDVector3 dp = pointTo - pointFrom;
+		distance = dp.length();
+		dir = dp * (1.0f / distance);
+	}
+};
+
 
 
 struct VDOBB : VDAABB
@@ -438,6 +484,12 @@ struct VDOBB : VDAABB
 		vertices[VDOctant::LEFT_UP_FORWARD] = position - (frame.right * halfExtents.x) + (frame.up * halfExtents.y) + (frame.forward * halfExtents.z);
 		vertices[VDOctant::RIGHT_UP_FORWARD] = position + (frame.right * halfExtents.x) + (frame.up * halfExtents.y) + (frame.forward * halfExtents.z);
 		vertsUpdated = true;
+	}
+
+	bool usingVertices()
+	{
+		if (!vertsUpdated)
+			setVertices();
 	}
 
 	VDImplicitPlane directionToImplicitPlane(VDDirection dir) const
