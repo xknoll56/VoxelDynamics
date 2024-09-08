@@ -107,6 +107,11 @@ struct VDVector3
         return sqrtf(x * x + y * y + z * z);
     }
 
+    float length2()
+    {
+        return x * x + y * y + z * z;
+    }
+
     void normalize()
     {
         float l = length();

@@ -3,8 +3,6 @@
 
 #include "VoxelDynamicsCollider.h"
 
-#define VD_COLLIDER_TOLERANCE 1e-5
-
 struct VDPenetrationField
 {
 	float maxPenetrations[6];
@@ -212,10 +210,11 @@ struct VDAABBContact
 	}
 };
 
-struct VDBoxManifold
+struct VDManifold
 {
 	VDPointer other;
 	VDContactInfo infos[8];
+	VDuint deepestPenetrationIndex;
 };
 
 bool VDAABB::collisionAABB(const VDAABB* pOther, VDAABBContact& contact)

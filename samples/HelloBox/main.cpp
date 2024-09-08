@@ -4,24 +4,38 @@
 struct HellBoxScene : Scene
 {
 
+
     VDOBB box;
     VDImplicitPlane plane;
     VDVector3 rayCastStart;
     void init() override
     {
         box.setHalfExtents(VDVector3(0.5, 1, 1.5));
-        box.setPosition({ 4,4,4 });
-        plane = VDImplicitPlane(VDVector3(), VDVector3(1, 1, 1), 5.0f, 8.0f, 0.45f);
+        plane = VDImplicitPlane(VDVector3(), VDVector3(0, 1, 0), 10.0f, 10.0f, 0.0f);
         rayCastStart = VDVector3(3, 10, 2);
     }
 
     void update(float dt) override
     {
         Scene::update(dt);
+        movePositionWithArrows(camera, rayCastStart, dt, 2.0f);
+        box.setPosition(rayCastStart);
         box.rotate(VDQuaternion::fromEulerAngles(VDVector3(dt * 0.1, dt, dt * 0.7)));
-  
+
         box.setLowAndHigh();
         box.setVertices();
+
+        VDManifold manifold;
+        VDCollisionBoxImplicitPlane(box, plane, manifold);
+    }
+
+    bool VDCollisionBoxImplicitPlane(const VDOBB& box, const VDImplicitPlane& plane, VDManifold& manifold)
+    {
+        VDDirection closestFaceDirection = VDVectorToFrameDirection(-plane.frame.up, box.frame);
+        VDImplicitPlane face = box.directionToImplicitPlane(closestFaceDirection);
+        face.center += VDDirectionToFrameVector(closestFaceDirection, box.frame) * 0.1f;
+        drawImplicitPlane(face, colorRed);
+        return true;
     }
 
     void draw(float dt) override
@@ -31,16 +45,8 @@ struct HellBoxScene : Scene
         drawAABB(box, colorGreen);
         drawBoxFrame(box, 3.0f);
 
-        VDContactInfo point;
-        VDAABB rayAABBTest({ -2,-2,-2 }, { 2,2,2 });
-        drawSolidAABB(rayAABBTest, colorWhite);
-        
-        movePositionWithArrows(camera, rayCastStart, dt, 2.0f);
-        if (VDRayCastOBB(rayCastStart, VDNormalize(box.position - rayCastStart), box, point))
-        {
-            drawLine(rayCastStart, point.point, colorGreen);
-            drawTranslatedBox(point.point, colorGreen, VDVector3::uniformScale(0.1f));
-        }
+        drawImplicitPlane(plane, colorWhite);
+
     }
 };
 
