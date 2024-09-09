@@ -215,6 +215,32 @@ struct VDManifold
 	VDPointer other;
 	VDContactInfo infos[8];
 	VDuint deepestPenetrationIndex;
+	VDuint count;
+	float deepestPenetration;
+
+	VDManifold()
+	{
+		other = NULL;
+		deepestPenetrationIndex = 0;
+		count = 0;
+		deepestPenetration = 0.0f;
+	}
+
+	void insertContact(const VDContactInfo info)
+	{
+		if (info.distance > deepestPenetration)
+		{
+			deepestPenetrationIndex = count;
+			deepestPenetration = info.distance;
+		}
+		infos[count++] = info;
+	}
+
+	void insertEdgeContact(const VDEdge edge)
+	{
+		insertContact(VDContactInfo(edge.pointFrom, edge.dir, edge.distance));
+	}
+
 };
 
 bool VDAABB::collisionAABB(const VDAABB* pOther, VDAABBContact& contact)

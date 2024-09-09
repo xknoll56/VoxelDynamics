@@ -192,6 +192,88 @@ struct VDAABBContact;
 
 struct VDVoxel;
 
+struct VDEdge
+{
+	VDVector3 pointFrom;
+	VDVector3 pointTo;
+	VDVector3 dir;
+	float distance;
+
+	VDEdge()
+	{
+		pointFrom = VDVector3::zero();
+		pointTo = VDVector3::right();
+		setDirection();
+	}
+
+	VDEdge(VDVector3 _point1, VDVector3 _point2)
+	{
+		pointFrom = _point1;
+		pointTo = _point2;
+		setDirection();
+	}
+
+	VDEdge(VDVector3 _pointFrom, VDVector3 _dir, float _distance)
+	{
+		pointFrom = _pointFrom;
+		dir = _dir;
+		distance = _distance;
+		pointTo = pointFrom + distance * dir;
+	}
+
+	VDEdge(VDVector3 _pointFrom, VDVector3 _pointTo, VDVector3 _dir, float _distance)
+	{
+		pointFrom = _pointFrom;
+		pointTo = _pointTo;
+		dir = _dir;
+		distance = _distance;
+	}
+
+	VDEdge closestEdgeToPoint(VDVector3 point) const
+	{
+		VDVector3 dp = point - pointFrom;
+		float projection = VDDot(dp, dir);
+		float clampedProjection = VDClamp(projection, 0.0f, distance);
+		VDVector3 closestPoint = pointFrom + clampedProjection * dir;
+		return VDEdge(closestPoint, point);
+	}
+
+	VDEdge closestEdgeToEdge(VDEdge edge) const
+	{
+		VDVector3 cross = VDCross(dir, edge.dir);
+		float crossLength2 = cross.length2();
+		if (crossLength2 < VD_COLLIDER_TOLERANCE)
+		{
+			// The edges are nearly parallel, so find the closest point from one edge to the other
+			return closestEdgeToPoint(edge.pointFrom);
+		}
+		float t = VDDot(VDCross(edge.pointFrom - pointFrom, edge.dir), cross) / crossLength2;
+		float s = VDDot(VDCross(edge.pointFrom - pointFrom, dir), cross) / crossLength2;
+		t = VDClamp(t, 0.0f, distance);
+		s = VDClamp(s, 0.0f, edge.distance);
+		return VDEdge(pointFrom + dir * t, edge.pointFrom + edge.dir * s);
+	}
+
+	void align(VDVector3 alignment)
+	{
+		if (VDDot(alignment, dir) < 0.0f)
+		{
+			VDVector3 temp = pointFrom;
+			pointFrom = pointTo;
+			pointTo = temp;
+			setDirection();
+		}
+	}
+
+	void setDirection()
+	{
+		VDVector3 dp = pointTo - pointFrom;
+		distance = dp.length();
+		dir = dp * (1.0f / distance);
+	}
+};
+
+
 struct VDImplicitPlane
 {
 	VDVector3 center;
@@ -250,6 +332,87 @@ struct VDImplicitPlane
 	VDVector3 normal() const
 	{
 		return frame.up;
+	}
+
+	void extractVerts(VDVector3 verts[4])
+	{
+		verts[0] = center + frame.right * rightHalfSize + frame.forward * forwardHalfSize;
+		verts[1] = center + frame.right * rightHalfSize - frame.forward * forwardHalfSize;
+		verts[2] = center - frame.right * rightHalfSize + frame.forward * forwardHalfSize;
+		verts[3] = center - frame.right * rightHalfSize - frame.forward * forwardHalfSize;
+	}
+
+	VDVector3 getVertexByDirections(VDDirection xDir, VDDirection zDir) const
+	{
+		if (xDir == VDDirection::RIGHT)
+		{
+			if (zDir == VDDirection::FORWARD)
+			{
+				return center + frame.right * rightHalfSize + frame.forward * forwardHalfSize;
+			}
+			else if (zDir == VDDirection::BACK)
+			{
+				return center + frame.right * rightHalfSize - frame.forward * forwardHalfSize;
+			}
+		}
+		else if (xDir == VDDirection::LEFT)
+		{
+			if (zDir == VDDirection::FORWARD)
+			{
+				return center - frame.right * rightHalfSize + frame.forward * forwardHalfSize;
+			}
+			else if (zDir == VDDirection::BACK)
+			{
+				return center - frame.right * rightHalfSize - frame.forward * forwardHalfSize;
+			}
+		}
+		return VDVector3::nan();
+	}
+
+	VDEdge getEdgeByDirection(VDDirection dir) const
+	{
+		switch (dir)
+		{
+		case VDDirection::RIGHT:
+			return VDEdge(getVertexByDirections(VDDirection::RIGHT, VDDirection::BACK),
+				getVertexByDirections(VDDirection::RIGHT, VDDirection::FORWARD), frame.forward, 2.0f * forwardHalfSize);
+			break;
+		case VDDirection::LEFT:
+			return VDEdge(getVertexByDirections(VDDirection::LEFT, VDDirection::BACK),
+				getVertexByDirections(VDDirection::LEFT, VDDirection::FORWARD), frame.forward, 2.0f * forwardHalfSize);
+			break;
+		case VDDirection::FORWARD:
+			return VDEdge(getVertexByDirections(VDDirection::LEFT, VDDirection::FORWARD),
+				getVertexByDirections(VDDirection::RIGHT, VDDirection::FORWARD), frame.right, 2.0f * rightHalfSize);
+			break;
+		case VDDirection::BACK:
+			return VDEdge(getVertexByDirections(VDDirection::LEFT, VDDirection::BACK),
+				getVertexByDirections(VDDirection::RIGHT, VDDirection::BACK), frame.right, 2.0f * rightHalfSize);
+			break;
+		}
+		return VDEdge();
+	}
+
+	VDEdge closestEdgeToPoint(VDVector3 point) const
+	{
+		VDVector3 dp = point - center;
+		float rightNormDist = VDDot(dp, frame.right) / rightHalfSize;
+		float forwardNormDist = VDDot(dp, frame.forward) / forwardHalfSize;
+		if (VDAbs(rightNormDist) >= VDAbs(forwardNormDist))
+		{
+			if (rightNormDist >= 0.0f)
+				return getEdgeByDirection(VDDirection::RIGHT);
+			else
+				return getEdgeByDirection(VDDirection::LEFT);
+		}
+		else
+		{
+			if (forwardNormDist >= 0.0f)
+				return getEdgeByDirection(VDDirection::FORWARD);
+			else
+				return getEdgeByDirection(VDDirection::BACK);
+		}
+		return VDEdge();
 	}
 };
 
@@ -446,77 +609,6 @@ enum VDOctant
 	LEFT_UP_FORWARD = 6,
 	RIGHT_UP_FORWARD = 7,
 };
-
-struct VDEdge
-{
-	VDVector3 pointFrom;
-	VDVector3 pointTo;
-	VDVector3 dir;
-	float distance;
-
-	VDEdge()
-	{
-		pointFrom = VDVector3::zero();
-		pointTo = VDVector3::right();
-		setDirection();
-	}
-
-	VDEdge(VDVector3 _point1, VDVector3 _point2) 
-	{
-		pointFrom = _point1;
-		pointTo = _point2;
-		setDirection();
-	}
-
-	VDEdge(VDVector3 _pointFrom, VDVector3 _dir, float _distance)
-	{
-		pointFrom = _pointFrom;
-		dir = _dir;
-		distance = _distance;
-		pointTo = pointFrom + distance * dir;
-	}
-
-	VDEdge(VDVector3 _pointFrom, VDVector3 _pointTo, VDVector3 _dir, float _distance) 
-	{
-		pointFrom = _pointFrom;
-		pointTo = _pointTo;
-		dir = _dir;
-		distance = _distance;
-	}
-
-	VDEdge closestEdgeToPoint(VDVector3 point) const
-	{
-		VDVector3 dp = point - pointFrom;
-		float projection = VDDot(dp, dir);
-		float clampedProjection = VDClamp(projection, 0.0f, distance);
-		VDVector3 closestPoint = pointFrom + clampedProjection * dir;
-		return VDEdge(closestPoint, point);
-	}
-
-	VDEdge closestEdgeToEdge(VDEdge edge) const
-	{
-		VDVector3 cross = VDCross(dir, edge.dir);
-		float crossLength2 = cross.length2();
-		if (crossLength2 < VD_COLLIDER_TOLERANCE)
-		{
-			// The edges are nearly parallel, so find the closest point from one edge to the other
-			return closestEdgeToPoint(edge.pointFrom); 
-		}
-		float t = VDDot(VDCross(edge.pointFrom - pointFrom, edge.dir), cross) / crossLength2;
-		float s = VDDot(VDCross(edge.pointFrom - pointFrom, dir), cross) / crossLength2;
-		t = VDClamp(t, 0.0f, distance);
-		s = VDClamp(s, 0.0f, edge.distance);
-		return VDEdge(pointFrom + dir * t, edge.pointFrom + edge.dir * s);
-	}
-
-	void setDirection()
-	{
-		VDVector3 dp = pointTo - pointFrom;
-		distance = dp.length();
-		dir = dp * (1.0f / distance);
-	}
-};
-
 
 
 struct VDOBB : VDAABB

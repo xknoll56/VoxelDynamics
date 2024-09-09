@@ -179,6 +179,11 @@ struct VDVector3
         return VDVector3(s, s, s);
     }
 
+    static VDVector3 nan()
+    {
+        return VDVector3(NAN, NAN, NAN);
+    }
+
     VDVector3 xComponentVector() const
     {
         return VDVector3(x, 0, 0);
@@ -193,6 +198,7 @@ struct VDVector3
     {
         return VDVector3(0, 0, z);
     }
+
 };
 
 struct VDVector3i
