@@ -431,6 +431,11 @@ VDVector3 VDTangentialComponent(VDVector3 vector, VDVector3 planeNormal)
     return vector - VDNormalComponent(vector, planeNormal);
 }
 
+VDVector3 VDAverage(VDVector3 v1, VDVector3 v2)
+{
+    return (v1 + v2) * 0.5f;
+}
+
 struct VDMatrix
 {
     float m[4][4];

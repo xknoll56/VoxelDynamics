@@ -14,7 +14,8 @@ enum VDDirection
 	FORWARD,
 	LEFT,
 	DOWN,
-	BACK
+	BACK,
+	NONE
 };
 
 VDDirection VDDirectionOpposite(VDDirection dir)
@@ -238,7 +239,7 @@ struct VDEdge
 		return VDEdge(closestPoint, point);
 	}
 
-	VDEdge closestEdgeToEdge(VDEdge edge) const
+	VDEdge closestEdgeToEdge(const VDEdge& edge) const
 	{
 		VDVector3 cross = VDCross(dir, edge.dir);
 		float crossLength2 = cross.length2();
@@ -252,6 +253,24 @@ struct VDEdge
 		t = VDClamp(t, 0.0f, distance);
 		s = VDClamp(s, 0.0f, edge.distance);
 		return VDEdge(pointFrom + dir * t, edge.pointFrom + edge.dir * s);
+	}
+
+	bool closestEdgeToEdgeNoClamp(const VDEdge& edge, VDEdge& edgeGap) const
+	{
+		VDVector3 cross = VDCross(dir, edge.dir);
+		float crossLength2 = cross.length2();
+		if (crossLength2 < VD_COLLIDER_TOLERANCE)
+		{
+			return false;
+		}
+		float t = VDDot(VDCross(edge.pointFrom - pointFrom, edge.dir), cross) / crossLength2;
+		float s = VDDot(VDCross(edge.pointFrom - pointFrom, dir), cross) / crossLength2;
+		if (t<0.0f || t>distance)
+			return false;
+		if (s<0.0f || s>edge.distance)
+			return false;
+		edgeGap = VDEdge(pointFrom + dir * t, edge.pointFrom + edge.dir * s);
+		return true;
 	}
 
 	void align(VDVector3 alignment)
@@ -393,7 +412,7 @@ struct VDImplicitPlane
 		return VDEdge();
 	}
 
-	VDEdge closestEdgeToPoint(VDVector3 point) const
+	VDDirection closestEdgeDirectionFromPoint(VDVector3 point) const
 	{
 		VDVector3 dp = point - center;
 		float rightNormDist = VDDot(dp, frame.right) / rightHalfSize;
@@ -401,18 +420,23 @@ struct VDImplicitPlane
 		if (VDAbs(rightNormDist) >= VDAbs(forwardNormDist))
 		{
 			if (rightNormDist >= 0.0f)
-				return getEdgeByDirection(VDDirection::RIGHT);
+				return VDDirection::RIGHT;
 			else
-				return getEdgeByDirection(VDDirection::LEFT);
+				return VDDirection::LEFT;
 		}
 		else
 		{
 			if (forwardNormDist >= 0.0f)
-				return getEdgeByDirection(VDDirection::FORWARD);
+				return VDDirection::FORWARD;
 			else
-				return getEdgeByDirection(VDDirection::BACK);
+				return VDDirection::BACK;
 		}
-		return VDEdge();
+		return VDDirection::NONE;
+	}
+
+	VDEdge closestEdgeToPoint(VDVector3 point) const
+	{
+		return getEdgeByDirection(closestEdgeDirectionFromPoint(point));
 	}
 };
 

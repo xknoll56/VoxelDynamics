@@ -977,6 +977,12 @@ void drawImplicitPlane(const VDImplicitPlane& plane, VDVector3 color)
     drawVertexBuffer(vbPlane, plane.center, plane.frame.toRotationMatrix(), VDVector3(plane.rightHalfSize*2.0f, 1.0f, plane.forwardHalfSize*2.0f), color);
 }
 
+void drawEdge(const VDEdge& edge, VDVector3 color, float thickness = 0.05f)
+{
+    VDQuaternion rotation = VDQuaternion::lookAt(edge.pointFrom, edge.pointTo);
+    drawBox(VDAverage(edge.pointFrom, edge.pointTo), rotation, VDVector3(thickness, thickness, edge.distance), color);
+}
+
 void drawChunkOutline(const VDGrid& chunk, VDVector3 color, bool fill = false)
 {
     VDVector3 halfExtents((float)chunk.gridSize * 0.5f,
