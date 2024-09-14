@@ -935,6 +935,12 @@ struct VDQuaternion
 		return VDVector3(rotatedQuat.x, rotatedQuat.y, rotatedQuat.z);
 	}
 
+    VDVector3 rotateAround(VDVector3 origin, VDVector3 point)
+    {
+        VDVector3 relPos = point - origin;
+        return rotatePoint(relPos) + origin;
+    }
+
 	static VDQuaternion fromFrame(VDFrame frame)
 	{
 		VDQuaternion quat;

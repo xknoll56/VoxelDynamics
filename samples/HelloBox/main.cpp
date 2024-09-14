@@ -7,21 +7,40 @@ struct HellBoxScene : Scene
 
     VDOBB box;
     VDImplicitPlane plane;
-    VDVector3 rayCastStart;
+    VDVector3 boxPosition;
     bool rotate;
     void init() override
     {
         box.setHalfExtents(VDVector3(0.5, 1, 1.5));
         plane = VDImplicitPlane(VDVector3(), VDVector3(0, 1, 0), 10.0f, 10.0f, 0.0f);
-        rayCastStart = VDVector3(3, 5, 2);
-        rotate = true;
+        boxPosition = VDVector3(0, 0.99, 0);
+        rotate = false;
+        rotPoint = VDVector3(0, 2, 0);
     }
+
+    void moveBoxAlongPlane(const VDImplicitPlane& plane, VDOBB& box, VDVector3 velocity, float dt)
+    {
+        VDManifold manifold;
+        VDCollisionBoxImplicitPlane(box, plane, manifold);
+
+        if (manifold.count > 0)
+        {
+            VDContactInfo ci = manifold.infos[manifold.deepestPenetrationIndex];
+            VDVector3 axis = VDCross(VDVector3::up(), velocity);
+            VDQuaternion w = VDQuaternion::fromAngleAxis(axis, dt * velocity.length());
+            box.setPosition(w.rotateAround(ci.point, box.position));
+            box.rotate(w);
+            box.translate(ci.normal * ci.distance);
+        }
+    }
+
+    VDVector3 rotPoint;
 
     void update(float dt) override
     {
         Scene::update(dt);
-        movePositionWithArrows(camera, rayCastStart, dt, 2.0f);
-        box.setPosition(rayCastStart);
+        movePositionWithArrows(camera, boxPosition, dt, 2.0f);
+        //box.setPosition(boxPosition);
 
         if (keysDown[GLFW_KEY_SPACE])
         {
@@ -29,13 +48,23 @@ struct HellBoxScene : Scene
         }
         if (rotate)
         {
-            box.rotate(VDQuaternion::fromEulerAngles(VDVector3(dt * 0.1, dt, dt * 0.7)));
-            box.setLowAndHigh();
-            box.setVertices();
+            //box.rotate(VDQuaternion::fromEulerAngles(VDVector3(dt * 0.1, dt, dt * 0.7)));
+            //box.setLowAndHigh();
+            //box.setVertices();
+            VDVector3 velVec = VDNormalize(VDVector3(1, 0, 1));
+            moveBoxAlongPlane(plane, box, velVec, dt);
         }
 
-        VDManifold manifold;
-        VDCollisionBoxImplicitPlane(box, plane, manifold);
+
+        //box.usingVertices();
+        //VDQuaternion w = VDQuaternion::fromAngleAxis(VDNormalize(VDVector3(0, 1, 1)), dt );
+        //VDVector3 newPos = w.rotateAround(box.vertices[4], box.position);
+        //box.rotate(w);
+        //box.setPosition(newPos);
+
+
+        //box.rotate(w);
+        //box.setPosition(newPos);
     }
 
     void VDCollisionBoxImplicitPlaneEdgeTest(const VDEdge& edge, const VDImplicitPlane& plane, VDManifold& manifold)
@@ -48,27 +77,36 @@ struct HellBoxScene : Scene
         VDEdge gap2;
         if (edge.closestEdgeToEdgeNoClamp(plane.getEdgeByDirection(dir1), gap1))
         {
-            if(VDDot(gap1.dir, plane.frame.up) >= 0.0f  && VDDot(gap1.dir, dir1Vec) >= 0.0f)
-                drawEdge(gap1, colorRed);
+            if (VDDot(gap1.dir, plane.frame.up) >= 0.0f && VDDot(gap1.dir, dir1Vec) >= 0.0f)
+            {
+                if(box.isPointInOBB(gap1.pointTo))
+                    manifold.insertEdgeContact(gap1);
+            }
         }
         if (dir1!=dir2 && edge.closestEdgeToEdgeNoClamp(plane.getEdgeByDirection(dir2), gap2))
         {
             if (VDDot(gap2.dir, plane.frame.up) >= 0.0f && VDDot(gap2.dir, dir2Vec) >= 0.0f)
-                drawEdge(gap2, colorRed);
+            {
+                if (box.isPointInOBB(gap2.pointTo))
+                    manifold.insertEdgeContact(gap2);
+            }
         }
     }
 
-    bool VDCollisionBoxImplicitPlane(const VDOBB& box, const VDImplicitPlane& plane, VDManifold& manifold)
+    bool VDCollisionBoxImplicitPlane(const VDOBB& box, const VDImplicitPlane& plane, VDManifold& manifold, float skinWidth = 0.005f)
     {
         VDDirection closestFaceDirection = VDVectorToFrameDirection(-plane.frame.up, box.frame);
+        VDVector3 closestFaceVector = VDDirectionToFrameVector(closestFaceDirection, box.frame);
         VDImplicitPlane face = box.directionToImplicitPlane(closestFaceDirection);
         VDVector3 faceVerts[4];
         face.extractVerts(faceVerts);
         for (int i = 0; i < 4; i++)
         {
             VDContactInfo ci;
-            if (VDRayCastImplicitPlane(faceVerts[i], plane.frame.up, plane, ci))
+            if (VDRayCastImplicitPlane(faceVerts[i]+ closestFaceVector*(-skinWidth), plane.frame.up, plane, ci))
             {
+                ci.normal = -ci.normal;
+                ci.distance -= skinWidth;
                 manifold.insertContact(ci);
                 drawTranslatedBox(ci.point, colorBlue, VDVector3::uniformScale(0.1f));
             }
@@ -106,10 +144,10 @@ struct HellBoxScene : Scene
         drawBox(box, colorWhite);
         drawBox(box, colorCyan, false);
         drawAABB(box, colorGreen);
-        drawBoxFrame(box, 3.0f);
+       /// drawBoxFrame(box, 3.0f);
 
         drawImplicitPlane(plane, colorWhite);
-
+        //drawTranslatedBox(box.vertices[4], colorGreen, VDVector3::uniformScale(0.1f));
     }
 };
 

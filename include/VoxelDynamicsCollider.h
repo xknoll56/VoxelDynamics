@@ -703,7 +703,7 @@ struct VDOBB : VDAABB
 		vertsUpdated = true;
 	}
 
-	bool usingVertices()
+	void usingVertices()
 	{
 		if (!vertsUpdated)
 			setVertices();

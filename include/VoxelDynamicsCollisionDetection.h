@@ -3,6 +3,7 @@
 
 #include "VoxelDynamicsCollider.h"
 
+
 struct VDPenetrationField
 {
 	float maxPenetrations[6];
@@ -228,12 +229,15 @@ struct VDManifold
 
 	void insertContact(const VDContactInfo info)
 	{
-		if (info.distance > deepestPenetration)
+		if (count < 8)
 		{
-			deepestPenetrationIndex = count;
-			deepestPenetration = info.distance;
+			if (info.distance > deepestPenetration)
+			{
+				deepestPenetrationIndex = count;
+				deepestPenetration = info.distance;
+			}
+			infos[count++] = info;
 		}
-		infos[count++] = info;
 	}
 
 	void insertEdgeContact(const VDEdge edge)
@@ -241,6 +245,24 @@ struct VDManifold
 		insertContact(VDContactInfo(edge.pointFrom, edge.dir, edge.distance));
 	}
 
+
+	VDContactInfo& contactClosestToDirection(VDVector3 dir, VDVector3 position)
+	{
+		float maxDistance = -FLT_MAX;
+		VDuint maxIndex = 0;
+		for (VDuint i = 0; i < count; i++)
+		{
+			VDVector3 localPosition = infos[i].point - position;
+			float distance = VDDot(dir, localPosition);
+			if (distance > maxDistance)
+			{
+				maxDistance = distance;
+				maxIndex = i;
+			}
+		}
+
+		return infos[maxIndex];
+	}
 };
 
 bool VDAABB::collisionAABB(const VDAABB* pOther, VDAABBContact& contact)
