@@ -94,7 +94,7 @@ struct VDSimulation
 		{
 			if (penetrationsField.maxPenetrations[i] > 0.0f)
 			{
-				contactPoints.insert(VDContactInfo(aabb.position, VDDirectionToVector((VDDirection)i), penetrationsField.maxPenetrations[i]));
+				contactPoints.insert(VDContactInfo(aabb.position, VDDirectionToVector((VDDirection)i), penetrationsField.maxPenetrations[i], FACE));
 			}
 		}
 	}
@@ -219,7 +219,7 @@ struct VDSimulation
 						VDAABBContact contact((VDPointer)it->item, (VDPointer)collIt->item, intersectionRegion, quadrantDir);
 						contact.setPenetrations();
 						VDContactInfo contactPoint(intersectionRegion.position,
-							VDDirectionToVector(contact.minDirections[0]), contact.getPenetrationByDirection(contact.minDirections[0]));
+							VDDirectionToVector(contact.minDirections[0]), contact.getPenetrationByDirection(contact.minDirections[0]), FACE);
 						resolveAABBDynamicBodyContact(it->item, collIt->item, contactPoint, dt);
 						if (contact.intersectionRegion.position.y < it->item->position.y && contact.intersectionRegion.crossSection(VDDirection::UP)>0.05f)
 							hasIntersection = true;

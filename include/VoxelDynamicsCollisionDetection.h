@@ -26,11 +26,20 @@ struct VDPenetrationField
 };
 
 
+enum VDContactType
+{
+	FACE = 0,
+	EDGE,
+	POINT,
+	INTERNAL
+};
+
 struct VDContactInfo
 {
 	VDVector3 normal;
 	float distance;
 	VDVector3 point;
+	VDContactType type;
 
 	VDContactInfo()
 	{
@@ -39,11 +48,17 @@ struct VDContactInfo
 		distance = 0.0;
 	}
 
-	VDContactInfo(VDVector3 _point, VDVector3 _normal, float _distance)
+	VDContactInfo(VDVector3 _point, VDVector3 _normal, float _distance, VDContactType _type)
 	{
 		normal = _normal;
 		distance = _distance;
 		point = _point;
+		type = _type;
+	}
+
+	VDEdge toEdge()
+	{
+		return VDEdge(point, normal, distance);
 	}
 };
 
@@ -242,7 +257,7 @@ struct VDManifold
 
 	void insertEdgeContact(const VDEdge edge)
 	{
-		insertContact(VDContactInfo(edge.pointFrom, edge.dir, edge.distance));
+		insertContact(VDContactInfo(edge.pointFrom, edge.dir, edge.distance, VDContactType::EDGE));
 	}
 
 
@@ -305,6 +320,7 @@ bool VDRayCastPlane(VDVector3 from, VDVector3 dir, VDVector3 planeNormal, VDVect
 	{
 		contactPoint.normal = planeNormal * -1.0f;
 	}
+	contactPoint.type = FACE;
 	return contactPoint.distance > 0.0f;
 }
 
@@ -333,7 +349,7 @@ bool VDRayCastAABB(VDVector3 from, VDVector3 dir, const VDAABB& aabb, VDContactI
 {
 	if (aabb.isPointInAABB(from))
 	{
-		contactInfo = VDContactInfo(from, dir, 0.0f);
+		contactInfo = VDContactInfo(from, dir, 0.0f, INTERNAL);
 		return true;
 	}
 	VDVector3 dp = aabb.position - from;
@@ -357,7 +373,7 @@ bool VDRayCastOBB(VDVector3 from, VDVector3 dir, const VDOBB& obb, VDContactInfo
 {
 	if (obb.isPointInOBB(from))
 	{
-		contactInfo = VDContactInfo(from, dir, 0.0f);
+		contactInfo = VDContactInfo(from, dir, 0.0f, INTERNAL);
 		return true;
 	}
 	VDVector3 dp = obb.position - from;
@@ -376,6 +392,77 @@ bool VDRayCastOBB(VDVector3 from, VDVector3 dir, const VDOBB& obb, VDContactInfo
 			return true;
 	}
 	return false;
+}
+
+void VDCollisionBoxImplicitPlaneEdgeTest(const VDOBB& box, const VDEdge& edge, const VDImplicitPlane& plane, VDManifold& manifold)
+{
+	VDDirection dir1 = plane.closestEdgeDirectionFromPoint(edge.pointFrom);
+	VDVector3 dir1Vec = VDDirectionToFrameVector(dir1, plane.frame);
+	VDDirection dir2 = plane.closestEdgeDirectionFromPoint(edge.pointTo);
+	VDVector3 dir2Vec = VDDirectionToFrameVector(dir2, plane.frame);
+	VDEdge gap1;
+	VDEdge gap2;
+	if (edge.closestEdgeToEdgeNoClamp(plane.getEdgeByDirection(dir1), gap1))
+	{
+		if (VDDot(gap1.dir, plane.frame.up) >= 0.0f && VDDot(gap1.dir, dir1Vec) >= 0.0f)
+		{
+			if (box.isPointInOBB(gap1.pointTo))
+				manifold.insertEdgeContact(gap1);
+		}
+	}
+	if (dir1 != dir2 && edge.closestEdgeToEdgeNoClamp(plane.getEdgeByDirection(dir2), gap2))
+	{
+		if (VDDot(gap2.dir, plane.frame.up) >= 0.0f && VDDot(gap2.dir, dir2Vec) >= 0.0f)
+		{
+			if (box.isPointInOBB(gap2.pointTo))
+				manifold.insertEdgeContact(gap2);
+		}
+	}
+}
+
+bool VDCollisionBoxImplicitPlane(const VDOBB& box, const VDImplicitPlane& plane, VDManifold& manifold, float skinWidth = 0.005f)
+{
+	VDDirection closestFaceDirection = VDVectorToFrameDirection(-plane.frame.up, box.frame);
+	VDVector3 closestFaceVector = VDDirectionToFrameVector(closestFaceDirection, box.frame);
+	VDImplicitPlane face = box.directionToImplicitPlane(closestFaceDirection);
+	VDVector3 faceVerts[4];
+	face.extractVerts(faceVerts);
+	for (int i = 0; i < 4; i++)
+	{
+		VDContactInfo ci;
+		if (VDRayCastImplicitPlane(faceVerts[i] + closestFaceVector * (-skinWidth), plane.frame.up, plane, ci))
+		{
+			ci.normal = -ci.normal;
+			ci.distance -= skinWidth;
+			manifold.insertContact(ci);
+		}
+	}
+
+	VDVector3 dp = plane.center - box.position;
+	VDVector3 inward = VDTangentialComponent(dp, plane.frame.up);
+	VDDirection inwardDir = VDVectorToFrameDirection(inward, box.frame);
+	VDImplicitPlane inwardFace = box.directionToImplicitPlane(inwardDir);
+
+	VDDirection edgeDirs[] = { VDDirection::RIGHT, VDDirection::LEFT, VDDirection::FORWARD, VDDirection::BACK };
+	if (VDDot(face.frame.up, inward) >= 0.0f)
+	{
+		for (int i = 0; i < 4; i++)
+		{
+			VDEdge edge = face.getEdgeByDirection(edgeDirs[i]);
+			VDCollisionBoxImplicitPlaneEdgeTest(box, edge, plane, manifold);
+		}
+	}
+	else
+	{
+		for (int i = 0; i < 4; i++)
+		{
+			VDEdge edge = inwardFace.getEdgeByDirection(edgeDirs[i]);
+			VDCollisionBoxImplicitPlaneEdgeTest(box, edge, plane, manifold);
+		}
+	}
+
+
+	return true;
 }
 
 

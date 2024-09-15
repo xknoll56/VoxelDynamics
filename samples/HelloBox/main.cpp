@@ -26,11 +26,23 @@ struct HellBoxScene : Scene
         if (manifold.count > 0)
         {
             VDContactInfo ci = manifold.infos[manifold.deepestPenetrationIndex];
-            VDVector3 axis = VDCross(VDVector3::up(), velocity);
-            VDQuaternion w = VDQuaternion::fromAngleAxis(axis, dt * velocity.length());
-            box.setPosition(w.rotateAround(ci.point, box.position));
-            box.rotate(w);
-            box.translate(ci.normal * ci.distance);
+            switch (ci.type)
+            {
+            case FACE:
+            {
+                VDVector3 axis = VDCross(VDVector3::up(), velocity);
+                VDQuaternion w = VDQuaternion::fromAngleAxis(axis, dt * velocity.length());
+                box.setPosition(w.rotateAround(ci.point, box.position));
+                box.rotate(w);
+                box.translate(ci.normal * ci.distance);
+            }
+            break;
+            case EDGE:
+            {
+                drawEdge(ci.toEdge(), colorRed, 0.05f);
+            }
+            break;
+            }
         }
     }
 
@@ -65,78 +77,6 @@ struct HellBoxScene : Scene
 
         //box.rotate(w);
         //box.setPosition(newPos);
-    }
-
-    void VDCollisionBoxImplicitPlaneEdgeTest(const VDEdge& edge, const VDImplicitPlane& plane, VDManifold& manifold)
-    {
-        VDDirection dir1 = plane.closestEdgeDirectionFromPoint(edge.pointFrom);
-        VDVector3 dir1Vec = VDDirectionToFrameVector(dir1, plane.frame);
-        VDDirection dir2 = plane.closestEdgeDirectionFromPoint(edge.pointTo);
-        VDVector3 dir2Vec = VDDirectionToFrameVector(dir2, plane.frame);
-        VDEdge gap1;
-        VDEdge gap2;
-        if (edge.closestEdgeToEdgeNoClamp(plane.getEdgeByDirection(dir1), gap1))
-        {
-            if (VDDot(gap1.dir, plane.frame.up) >= 0.0f && VDDot(gap1.dir, dir1Vec) >= 0.0f)
-            {
-                if(box.isPointInOBB(gap1.pointTo))
-                    manifold.insertEdgeContact(gap1);
-            }
-        }
-        if (dir1!=dir2 && edge.closestEdgeToEdgeNoClamp(plane.getEdgeByDirection(dir2), gap2))
-        {
-            if (VDDot(gap2.dir, plane.frame.up) >= 0.0f && VDDot(gap2.dir, dir2Vec) >= 0.0f)
-            {
-                if (box.isPointInOBB(gap2.pointTo))
-                    manifold.insertEdgeContact(gap2);
-            }
-        }
-    }
-
-    bool VDCollisionBoxImplicitPlane(const VDOBB& box, const VDImplicitPlane& plane, VDManifold& manifold, float skinWidth = 0.005f)
-    {
-        VDDirection closestFaceDirection = VDVectorToFrameDirection(-plane.frame.up, box.frame);
-        VDVector3 closestFaceVector = VDDirectionToFrameVector(closestFaceDirection, box.frame);
-        VDImplicitPlane face = box.directionToImplicitPlane(closestFaceDirection);
-        VDVector3 faceVerts[4];
-        face.extractVerts(faceVerts);
-        for (int i = 0; i < 4; i++)
-        {
-            VDContactInfo ci;
-            if (VDRayCastImplicitPlane(faceVerts[i]+ closestFaceVector*(-skinWidth), plane.frame.up, plane, ci))
-            {
-                ci.normal = -ci.normal;
-                ci.distance -= skinWidth;
-                manifold.insertContact(ci);
-                drawTranslatedBox(ci.point, colorBlue, VDVector3::uniformScale(0.1f));
-            }
-        }
-
-        VDVector3 dp = plane.center - box.position;
-        VDVector3 inward = VDTangentialComponent(dp, plane.frame.up);
-        VDDirection inwardDir = VDVectorToFrameDirection(inward, box.frame);
-        VDImplicitPlane inwardFace = box.directionToImplicitPlane(inwardDir);
-
-        VDDirection edgeDirs[] = { VDDirection::RIGHT, VDDirection::LEFT, VDDirection::FORWARD, VDDirection::BACK };
-        if (VDDot(face.frame.up, inward) >= 0.0f)
-        {
-            for (int i = 0; i < 4; i++)
-            {
-                VDEdge edge = face.getEdgeByDirection(edgeDirs[i]);
-                VDCollisionBoxImplicitPlaneEdgeTest(edge, plane, manifold);
-            }
-        }
-        else
-        {
-            for (int i = 0; i < 4; i++)
-            {
-                VDEdge edge = inwardFace.getEdgeByDirection(edgeDirs[i]);
-                VDCollisionBoxImplicitPlaneEdgeTest(edge, plane, manifold);
-            }
-        }
-
-
-        return true;
     }
 
     void draw(float dt) override
