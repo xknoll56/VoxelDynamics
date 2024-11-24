@@ -4,10 +4,11 @@
 struct HelloVoxelDynamicsScene : Scene
 {
     VDSimulation sim;
+    VDTriangle triangle;
 
     void init() override
     {
-
+        triangle = VDTriangle({ 0,0,0 }, { 3,0,0 }, { 0,1,3 });
     }
 
     void update(float dt) override
@@ -17,8 +18,8 @@ struct HelloVoxelDynamicsScene : Scene
 
     void draw(float dt) override
     {
-        drawTranslatedBox(VDVector3(), {1,1,1});
-
+        drawTranslatedBox(VDVector3(2,2,2), {1,1,1});
+        drawTriangle(triangle, VDVector3::right());
     }
 };
 

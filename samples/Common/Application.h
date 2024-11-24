@@ -221,11 +221,21 @@ void initApplication()
             -0.5f, 0.0f,  0.5f,    0.0f, 1.0f, 0.0f,  0.0f, 1.0f,
     };
 
+    static const float triangleVerts[] = {
+            -0.5f, 0.0f, -0.5f,    0.0f, -1.0f, 0.0f,  0.0f, 0.5f,
+             0.5f, 0.0f, -0.5f,    0.0f, -1.0f, 0.0f,  0.5f, 0.5f,
+             0.5f, 0.0f,  0.5f,    0.0f, -1.0f, 0.0f,  0.5f, 1.0f,
+             -0.5f, 0.0f, -0.5f,   0.0f, 1.0f, 0.0f,  0.0f, 0.5f,
+             0.5f, 0.0f,  0.5f,    0.0f, 1.0f, 0.0f,  0.5f, 1.0f,
+             0.5f, 0.0f, -0.5f,    0.0f, 1.0f, 0.0f,  0.5f, 0.5f,
+    };
+
     vbOrigin.init((float*)vertexDataOriginCentered, 36);
     vbPositiveQuadrant.init((float*)vertexDataPositiveQuadrant, 36);
     vbWire.initLines(cubeWireVerts, 24);
     vbLine.initLines(lineVerts, 2);
     vbPlane.init((float*)planeVerts, 12);
+    vbTriangle.init((float*)triangleVerts, 6);
 
 
     stbi_set_flip_vertically_on_load(true);

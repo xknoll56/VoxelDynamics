@@ -440,6 +440,23 @@ struct VDImplicitPlane
 	}
 };
 
+struct VDTriangle
+{
+	VDVector3 vertices[3];
+	VDVector3 normal;
+
+	VDTriangle(VDVector3 v1, VDVector3 v2, VDVector3 v3)
+	{
+		vertices[0] = v1;
+		vertices[1] = v2;
+		vertices[2] = v3;
+		
+		normal = VDNormalize(VDCross(v3 - v1, v2 - v1));
+	}
+
+	VDTriangle() : VDTriangle({ 0,0,0 }, { 1,0,0 }, { 0,0, 1 }) {}
+};
+
 struct VDAABB
 {
 	VDVector3 low;

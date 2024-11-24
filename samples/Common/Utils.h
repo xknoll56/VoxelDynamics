@@ -270,6 +270,24 @@ struct VertexBuffer
         glDrawArrays(drawMode, 0, numVerts);
     }
 
+    void updateVertex(int ind, const float values[8]) 
+    {
+        if (ind < 0 || ind >= numVerts) 
+        {
+            // Handle out-of-range index
+            fprintf(stderr, "Index out of range: %d\n", ind);
+            return;
+        }
+
+        glBindBuffer(GL_ARRAY_BUFFER, vertexbufferId);
+
+        // Calculate the offset in bytes for the vertex
+        GLsizeiptr offset = ind * 8 * sizeof(float);
+
+        // Update the data in the buffer
+        glBufferSubData(GL_ARRAY_BUFFER, offset, 8 * sizeof(float), values);
+    }
+
     //~VertexBuffer()
     //{
     //    glDeleteBuffers(1, &vertexbufferId);
@@ -287,6 +305,7 @@ VertexBuffer vbPositiveQuadrant;
 VertexBuffer vbWire;
 VertexBuffer vbLine;
 VertexBuffer vbPlane;
+VertexBuffer vbTriangle;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     WINDOW_WIDTH = width;
@@ -975,6 +994,23 @@ void drawLine(VDVector3 from, VDVector3 to, VDVector3 color)
 void drawImplicitPlane(const VDImplicitPlane& plane, VDVector3 color)
 {
     drawVertexBuffer(vbPlane, plane.center, plane.frame.toRotationMatrix(), VDVector3(plane.rightHalfSize*2.0f, 1.0f, plane.forwardHalfSize*2.0f), color);
+}
+
+void drawTriangle(VDTriangle triangle, VDVector3 color)
+{
+	float vert[8];
+	memcpy(vert + 3 * sizeof(float), &triangle.normal, 3 * sizeof(float));
+	memcpy(vert, &triangle.vertices[0], 3 * sizeof(float));
+	vbTriangle.updateVertex(0, vert);
+	vbTriangle.updateVertex(3, vert);
+	memcpy(vert, &triangle.vertices[1], 3 * sizeof(float));
+	vbTriangle.updateVertex(1, vert);
+	vbTriangle.updateVertex(5, vert);
+	memcpy(vert, &triangle.vertices[2], 3 * sizeof(float));
+	vbTriangle.updateVertex(2, vert);
+	vbTriangle.updateVertex(4, vert);
+
+	drawVertexBuffer(vbTriangle, VDVector3::zero(), VDMatrix(), VDVector3::one(), color);
 }
 
 void drawEdge(const VDEdge& edge, VDVector3 color, float thickness = 0.05f)
