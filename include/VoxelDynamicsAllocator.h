@@ -155,6 +155,8 @@ struct VDObjectPool : public VDBaseObjectPool
 #include <typeindex>
 #include <typeinfo>
 #include <unordered_map>
+#include <stdexcept>
+
 
 #define ALLOCATOR_INITIAL_CAPACITY 100
 #define ALLOCATOR_HASH_DEFUALT_CAPACITY 10
