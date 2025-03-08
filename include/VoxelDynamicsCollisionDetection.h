@@ -2,7 +2,7 @@
 #define VOXEL_DYNAMICS_COLLISION_DETECTION
 
 #include "VoxelDynamicsCollider.h"
-
+#include <cfloat>
 
 struct VDPenetrationField
 {
@@ -12,7 +12,13 @@ struct VDPenetrationField
 	VDPenetrationField()
 	{
 		memset(maxPenetrations, 0.0f, 6 * sizeof(float));
-		memset(pVoxels, NULL, 6 * sizeof(float));
+		for(int i = 0; i<6; i++)
+			pVoxels[i] = NULL;
+	}
+
+	~VDPenetrationField()
+	{
+
 	}
 
 	void insertPenetration(VDDirection dir, float magnitude, VDPointer pVoxel)
@@ -24,7 +30,6 @@ struct VDPenetrationField
 		}
 	}
 };
-
 
 enum VDContactType
 {

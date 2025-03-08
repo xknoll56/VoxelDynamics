@@ -297,6 +297,8 @@ void runApplication(Scene* pScene)
             dYaw = (mouseX - mouseLockX) * mouseSensitivity;
             dPitch = (mouseY - mouseLockY) * mouseSensitivity;
             glfwSetCursorPos(window, mouseLockX, mouseLockY);
+            mouseX = mouseLockX;
+            mouseY = mouseLockY;
         }
         else
         {
@@ -306,7 +308,7 @@ void runApplication(Scene* pScene)
                 glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
             }
         }
-        //camera.handleInputs(dt, -dYaw, -dPitch);
+
         pScene->update(dt);
         viewProjection = pScene->camera.view * proj;
 
