@@ -743,7 +743,7 @@ void movePositionWithArrows(const Camera& camera, VDVector3& position, float dt,
     {
         position += forwardXZ * dt * -speed;
     }
-    if (keys[GLFW_KEY_END])
+    if (keys[GLFW_KEY_SLASH])
     {
         position += VDVector3::up() * dt * speed;
     }
@@ -1016,7 +1016,13 @@ void drawTriangle(VDTriangle triangle, VDVector3 color)
 void drawEdge(const VDEdge& edge, VDVector3 color, float thickness = 0.05f)
 {
     VDQuaternion rotation = VDQuaternion::lookAt(edge.pointFrom, edge.pointTo);
-    drawBox(VDAverage(edge.pointFrom, edge.pointTo), rotation, VDVector3(thickness, thickness, edge.distance), color);
+    float dot = VDDot(edge.dir, VDVector3::up());
+    if (VDAbs(dot) > 0.99f)
+    {
+        drawBox(VDAverage(edge.pointFrom, edge.pointTo), VDQuaternion(), VDVector3(thickness, edge.distance, thickness), color);
+    }
+    else
+        drawBox(VDAverage(edge.pointFrom, edge.pointTo), rotation, VDVector3(thickness, thickness, edge.distance), color);
 }
 
 void drawChunkOutline(const VDGrid& chunk, VDVector3 color, bool fill = false)

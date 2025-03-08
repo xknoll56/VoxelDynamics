@@ -388,6 +388,26 @@ struct VDImplicitPlane
 		return VDVector3::nan();
 	}
 
+	VDVector3 getVertexByIndex(int index) const
+	{
+		switch (index)
+		{
+		case 0:
+			return center + frame.right * rightHalfSize + frame.forward * forwardHalfSize;
+			break;
+		case 1:
+			return center + frame.right * rightHalfSize - frame.forward * forwardHalfSize;
+			break;
+		case 2:
+			return center - frame.right * rightHalfSize + frame.forward * forwardHalfSize;
+			break;
+		case 3:
+			return center - frame.right * rightHalfSize - frame.forward * forwardHalfSize;
+			break;
+		}
+		return VDVector3::nan();
+	}
+
 	VDEdge getEdgeByDirection(VDDirection dir) const
 	{
 		switch (dir)
@@ -440,23 +460,6 @@ struct VDImplicitPlane
 	}
 };
 
-struct VDTriangle
-{
-	VDVector3 vertices[3];
-	VDVector3 normal;
-
-	VDTriangle(VDVector3 v1, VDVector3 v2, VDVector3 v3)
-	{
-		vertices[0] = v1;
-		vertices[1] = v2;
-		vertices[2] = v3;
-		
-		normal = VDNormalize(VDCross(v3 - v1, v2 - v1));
-	}
-
-	VDTriangle() : VDTriangle({ 0,0,0 }, { 1,0,0 }, { 0,0, 1 }) {}
-};
-
 struct VDAABB
 {
 	VDVector3 low;
@@ -487,8 +490,9 @@ struct VDAABB
 	}
 
 	VDAABB()
+		: low(VDVector3::zero()), high(VDVector3::one()) 
 	{
-		VDAABB(VDVector3::zero(), VDVector3::one());
+		setMidPointAndHalfExtents();
 	}
 
 	VDAABB(const VDAABB& other)
@@ -639,6 +643,41 @@ struct VDAABB
 	}
 };
 
+struct VDTriangle
+{
+	VDVector3 vertices[3];
+	VDVector3 normal;
+
+	VDTriangle(VDVector3 v1, VDVector3 v2, VDVector3 v3)
+	{
+		vertices[0] = v1;
+		vertices[1] = v2;
+		vertices[2] = v3;
+
+		normal = VDNormalize(VDCross(v3 - v1, v2 - v1));
+	}
+
+	VDTriangle() : VDTriangle({ 0,0,0 }, { 1,0,0 }, { 0,0, 1 }) {}
+
+	VDEdge closestEdgeToPoint(VDVector3 point) const
+	{
+
+	}
+
+	VDAABB toAABB() const
+	{
+		return VDAABB(VDMin(vertices[0], VDMin(vertices[1], vertices[2])),
+			VDMax(vertices[0], VDMax(vertices[1], vertices[2])));
+	}
+
+	VDEdge getEdgeByIndex(int index) const
+	{
+		index %= 3;
+		int toInd = (index + 1) % 3;
+		return VDEdge(vertices[index], vertices[toInd]);
+	}
+};
+
 enum VDOctant
 {
 	LEFT_DOWN_BACK = 0,
@@ -650,6 +689,60 @@ enum VDOctant
 	LEFT_UP_FORWARD = 6,
 	RIGHT_UP_FORWARD = 7,
 };
+
+VDOctant VDVectorToOctant(VDVector3 vector)
+{
+	if (vector.x >= 0.0f)
+	{
+		if (vector.y >= 0.0f)
+		{
+			if (vector.z >= 0.0f)
+			{
+				return VDOctant::RIGHT_UP_FORWARD;
+			}
+			else
+			{
+				return VDOctant::RIGHT_UP_BACK;
+			}
+		}
+		else
+		{
+			if (vector.z >= 0.0f)
+			{
+				return VDOctant::RIGHT_DOWN_FORWARD;
+			}
+			else
+			{
+				return VDOctant::RIGHT_DOWN_BACK;
+			}
+		}
+	}
+	else
+	{
+		if (vector.y >= 0.0f)
+		{
+			if (vector.z >= 0.0f)
+			{
+				return VDOctant::LEFT_UP_FORWARD;
+			}
+			else
+			{
+				return VDOctant::LEFT_UP_BACK;
+			}
+		}
+		else
+		{
+			if (vector.z >= 0.0f)
+			{
+				return VDOctant::LEFT_DOWN_FORWARD;
+			}
+			else
+			{
+				return VDOctant::LEFT_DOWN_BACK;
+			}
+		}
+	}
+}
 
 
 struct VDOBB : VDAABB

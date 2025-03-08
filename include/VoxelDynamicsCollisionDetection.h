@@ -310,7 +310,7 @@ bool VDRayCastPlane(VDVector3 from, VDVector3 dir, VDVector3 planeNormal, VDVect
 	{
 		contactPoint.normal = planeNormal;
 		contactPoint.distance = 0.0f;
-		contactPoint.point = pointOnPlane;
+		contactPoint.point = from;
 		return true;
 	}
 	float dirDotNormal = VDDot(dir, planeNormal);
@@ -336,11 +336,50 @@ bool VDRayCastImplicitPlaneContained(const VDImplicitPlane& plane, VDContactInfo
 	return false;
 }
 
+bool VDRayCastTriangleContained(const VDTriangle& triangle, VDContactInfo& contactInfo)
+{
+	const VDVector3& p = contactInfo.point;
+	const VDVector3& v0 = triangle.vertices[0];
+	const VDVector3& v1 = triangle.vertices[1];
+	const VDVector3& v2 = triangle.vertices[2];
+	const VDVector3& n = triangle.normal;
+
+
+	// Step 1: Check if the point is inside the triangle using edge tests
+	VDVector3 edge0 = v1 - v0;
+	VDVector3 edge1 = v2 - v1;
+	VDVector3 edge2 = v0 - v2;
+
+	VDVector3 c0 = p - v0;
+	VDVector3 c1 = p - v1;
+	VDVector3 c2 = p - v2;
+
+	// Cross products for the edge tests
+	VDVector3 cross0 = VDCross(edge0, c0);
+	VDVector3 cross1 = VDCross(edge1, c1);
+	VDVector3 cross2 = VDCross(edge2, c2);
+
+	// Check if all cross products are in the same direction as the triangle normal
+	if ((VDSign(VDDot(n, cross0))==VDSign(VDDot(n, cross1))) && (VDSign(VDDot(n, cross0)) == VDSign(VDDot(n, cross2))))
+		return true;
+
+	return false;
+}
+
 bool VDRayCastImplicitPlane(VDVector3 from, VDVector3 dir, const VDImplicitPlane& plane, VDContactInfo& contactInfo)
 {
 	if (VDRayCastPlane(from, dir, plane.frame.up, plane.center, contactInfo))
 	{
 		return VDRayCastImplicitPlaneContained(plane, contactInfo);
+	}
+	return false;
+}
+
+bool VDRayCastTriangle(VDVector3 from, VDVector3 dir, const VDTriangle& triangle, VDContactInfo& contactInfo)
+{
+	if (VDRayCastPlane(from, dir, triangle.normal, triangle.vertices[0], contactInfo))
+	{
+		return VDRayCastTriangleContained(triangle, contactInfo);
 	}
 	return false;
 }
@@ -364,6 +403,30 @@ bool VDRayCastAABB(VDVector3 from, VDVector3 dir, const VDAABB& aabb, VDContactI
 			return true;
 		VDImplicitPlane zPlane = dir.z > 0.0f ? aabb.directionToImplicitPlane(VDDirection::BACK) : aabb.directionToImplicitPlane(VDDirection::FORWARD);
 		if (VDRayCastImplicitPlane(from, dir, zPlane, contactInfo))
+			return true;
+	}
+	return false;
+}
+
+bool VDRayCastAABB(VDVector3 from, VDVector3 dir, const VDAABB& aabb, VDContactInfo& contactInfo, VDImplicitPlane& contactPlane)
+{
+	if (aabb.isPointInAABB(from))
+	{
+		contactInfo = VDContactInfo(from, dir, 0.0f, INTERNAL);
+		return true;
+	}
+	VDVector3 dp = aabb.position - from;
+	float dot = VDDot(dp, dir);
+	if (dot >= 0.0f)
+	{
+		contactPlane = dir.x > 0.0f ? aabb.directionToImplicitPlane(VDDirection::LEFT) : aabb.directionToImplicitPlane(VDDirection::RIGHT);
+		if (VDRayCastImplicitPlane(from, dir, contactPlane, contactInfo))
+			return true;
+		contactPlane = dir.y > 0.0f ? aabb.directionToImplicitPlane(VDDirection::DOWN) : aabb.directionToImplicitPlane(VDDirection::UP);
+		if (VDRayCastImplicitPlane(from, dir, contactPlane, contactInfo))
+			return true;
+		contactPlane = dir.z > 0.0f ? aabb.directionToImplicitPlane(VDDirection::BACK) : aabb.directionToImplicitPlane(VDDirection::FORWARD);
+		if (VDRayCastImplicitPlane(from, dir, contactPlane, contactInfo))
 			return true;
 	}
 	return false;
@@ -464,6 +527,7 @@ bool VDCollisionBoxImplicitPlane(const VDOBB& box, const VDImplicitPlane& plane,
 
 	return true;
 }
+
 
 
 
