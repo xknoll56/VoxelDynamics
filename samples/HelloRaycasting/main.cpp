@@ -1,45 +1,76 @@
 #include "Utils.h"
 #include "Application.h"
 
-struct HelloRaycastingScene : Scene
+struct HelloRaycastScene : Scene
 {
-
-    VDOBB box;
-    VDImplicitPlane plane;
-    VDVector3 rayCastStart;
+    VDSimulation sim;
+    VDAgentController* pController;
+    std::vector<InstanceBuffer> ibs;
+	VDVector3 rayStart = VDVector3(0, 10, 0);
     void init() override
     {
-        box.setHalfExtents(VDVector3(0.5, 1, 1.5));
-        plane = VDImplicitPlane(VDVector3(), VDVector3(0, 1, 0), 10.0f, 10.0f, 0.0f);
-        rayCastStart = VDVector3(3, 10, 2);
+        texArr.initCheckersTexture(0);
+        sim = VDSimulation(20, { -20,-20,-20 }, 2, 2);
+        for (int i = -10; i <= 10; i++)
+        {
+            for (int j = -10; j <= 10; j++)
+            {
+                sim.space.setVoxelOccupied({ (float)i, 0, (float)j });
+            }
+        }
+        for (int i = 0; i < 2; i++)
+        {
+            for (int j = 0; j < 2; j++)
+            {
+                for (int k = 0; k < 2; k++)
+                {
+                    sim.space.setChunkOccupied({ i,j,k });
+                }
+            }
+        }
+        ibs.reserve(8);
+        for (int i = 0; i < 8; i++)
+        {
+            if (sim.space.grids[i].occupied)
+            {
+                ibs.push_back(InstanceBuffer::instanceBufferFromChunk(*sim.space.grids[i].pChunk, 400));
+                sim.space.grids[i].pChunk->userData = &ibs[i];
+            }
+        }
+        pController = sim.createAgentController(VDVector3(0, 2, 0), VDVector3(0.3, 0.8, 0.3), 3.0f);
     }
 
     void update(float dt) override
     {
         Scene::update(dt);
-        movePositionWithArrows(camera, rayCastStart, dt, 2.0f);
-        box.setPosition(rayCastStart);
-        box.rotate(VDQuaternion::fromEulerAngles(VDVector3(dt * 0.1, dt, dt * 0.7)));
-  
-        box.setLowAndHigh();
-        box.setVertices();
+        moveAgentWithArrows(camera, *pController, dt, pController->speed);
+        camera.position = pController->position + VDVector3(0, pController->halfExtents.y, 0);
+        sim.simulate(dt);
+		movePositionWithArrows(camera, rayStart, dt, 5.0f);
+
     }
 
-    bool VDCollisionBoxImplicitPlane(const VDOBB& box, const VDImplicitPlane& plane, VDManifold& manifold)
+    void raycast(VDSpace* pSpace, VDVector3 from, VDVector3 dir, VDContactInfo& contactPoint)
     {
-        VDVector3 dp = plane.center - box.position;
-
+        VDGrid* pGrid = pSpace->getGrid(from);
     }
 
     void draw(float dt) override
     {
-        drawBox(box, colorWhite);
-        drawBox(box, colorCyan, false);
-        drawAABB(box, colorGreen);
-        drawBoxFrame(box, 3.0f);
-        
-        drawImplicitPlane(plane, colorWhite);
+        drawPoint(rayStart, colorRed);
+		VDGrid* cur = sim.space.getGrid(camera.position);
+        drawGrid(cur, colorYellow);
+        VDContactInfo contactPoint;
+        if(cur->raycast(rayStart, VDVector3::down()+VDVector3::back(), 10000.0f, contactPoint))
+        {
+            drawPoint(contactPoint.point, colorGreen);
+            drawLine(rayStart, contactPoint.point, colorGreen);
+        }
 
+        for (int i = 0; i < ibs.size(); i++)
+        {
+            drawInstanceBuffer(ibs[i], texArr);
+        }
     }
 };
 
@@ -47,7 +78,7 @@ struct HelloRaycastingScene : Scene
 int main(void)
 {
     initApplication();
-    HelloRaycastingScene scene;
+    HelloRaycastScene scene;
     runApplication(&scene);
     return 0;
 }

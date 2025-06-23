@@ -894,6 +894,11 @@ void drawBox(VDVector3 translation, VDVector3 euler, VDVector3 scale, VDVector3 
     drawBox(model, color, fill);
 }
 
+void drawPoint(VDVector3 position, VDVector3 color)
+{
+	drawBox(position, VDVector3(0, 0, 0), VDVector3(0.1f, 0.1f, 0.1f), color, true);
+}
+
 void drawBox(VDVector3 translation, VDQuaternion rotation, VDVector3 scale, VDVector3 color, bool fill = true)
 {
     VDMatrix model = VDScale(scale) * rotation.toMatrix() * VDTranslation(translation);
@@ -1057,6 +1062,26 @@ void drawSpace(const VDSpace& space, VDVector3 color)
         }
     }
 }
+
+void drawGrid(const VDGrid* pGrid, VDVector3 color, bool fill = false)
+{
+    if (pGrid != nullptr)
+    {
+        VDVector3 halfExtents((float)pGrid->gridSize * 0.5f,
+            (float)pGrid->gridSize * 0.5f, (float)pGrid->gridSize * 0.5f);
+        VDVector3 fullExtents = halfExtents * 2.0f;
+        VertexBuffer vb = vbWire;
+        GLenum mode = GL_LINES;
+        if (fill)
+        {
+            vb = vbOrigin;
+            mode = GL_TRIANGLES;
+        }
+        drawVertexBuffer(vb, pGrid->low + halfExtents, { 0,0,0 }, fullExtents, color, mode);
+    }
+}
+
+
 
 void drawInstanceBuffer(const InstanceBuffer& instanceBuffer, const TextureArray& texArr)
 {

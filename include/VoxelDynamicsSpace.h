@@ -386,6 +386,84 @@ struct VDGrid
 		}
 		return voxelList;
 	}
+	bool VDGrid::raycast(const VDVector3& origin, const VDVector3& direction, float maxDistance, VDContactInfo& outContact) const {
+		VDVector3 relPos = origin - low;
+		VDVector3i voxel = VDVector3i(relPos);
+
+		if (!validateCoords(voxel))
+			return false;
+
+		// Step direction
+		int stepX = direction.x > 0 ? 1 : (direction.x < 0 ? -1 : 0);
+		int stepY = direction.y > 0 ? 1 : (direction.y < 0 ? -1 : 0);
+		int stepZ = direction.z > 0 ? 1 : (direction.z < 0 ? -1 : 0);
+
+		// tDelta
+		float tDeltaX = (direction.x != 0.0f) ? fabs(1.0f / direction.x) : std::numeric_limits<float>::infinity();
+		float tDeltaY = (direction.y != 0.0f) ? fabs(1.0f / direction.y) : std::numeric_limits<float>::infinity();
+		float tDeltaZ = (direction.z != 0.0f) ? fabs(1.0f / direction.z) : std::numeric_limits<float>::infinity();
+
+		// tMax (distance to first voxel boundary)
+		float nextVoxelX = (stepX > 0) ? (voxel.x + 1.0f) : voxel.x;
+		float nextVoxelY = (stepY > 0) ? (voxel.y + 1.0f) : voxel.y;
+		float nextVoxelZ = (stepZ > 0) ? (voxel.z + 1.0f) : voxel.z;
+
+		float tMaxX = (direction.x != 0.0f) ? (nextVoxelX - relPos.x) / direction.x : std::numeric_limits<float>::infinity();
+		float tMaxY = (direction.y != 0.0f) ? (nextVoxelY - relPos.y) / direction.y : std::numeric_limits<float>::infinity();
+		float tMaxZ = (direction.z != 0.0f) ? (nextVoxelZ - relPos.z) / direction.z : std::numeric_limits<float>::infinity();
+
+		if (tMaxX < 0) tMaxX = 0;
+		if (tMaxY < 0) tMaxY = 0;
+		if (tMaxZ < 0) tMaxZ = 0;
+
+		float distance = 0.0f;
+
+		while (distance <= maxDistance) {
+			if (validateCoords(voxel)) {
+				VDuint index = getIndex(voxel.x, voxel.y, voxel.z);
+				if (voxels[index].occupied) {
+					// Fill contact info
+					outContact.point = origin + direction * distance;
+					outContact.normal = -direction; // Normal opposes the ray direction
+					outContact.distance = distance;
+					//outContact.type = VDContactType::VOXEL_HIT; // Assuming this enum exists
+					return true;
+				}
+			}
+			else {
+				return false;
+			}
+
+			// Step
+			if (tMaxX < tMaxY) {
+				if (tMaxX < tMaxZ) {
+					voxel.x += stepX;
+					distance = tMaxX;
+					tMaxX += tDeltaX;
+				}
+				else {
+					voxel.z += stepZ;
+					distance = tMaxZ;
+					tMaxZ += tDeltaZ;
+				}
+			}
+			else {
+				if (tMaxY < tMaxZ) {
+					voxel.y += stepY;
+					distance = tMaxY;
+					tMaxY += tDeltaY;
+				}
+				else {
+					voxel.z += stepZ;
+					distance = tMaxZ;
+					tMaxZ += tDeltaZ;
+				}
+			}
+		}
+
+		return false;
+	}
+
 
 };
 
