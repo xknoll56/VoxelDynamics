@@ -193,7 +193,7 @@ struct VDAABBContact;
 
 struct VDVoxel;
 
-struct VDEdge
+struct VDEdge : IVDSortable<VDEdge>
 {
 	VDVector3 pointFrom;
 	VDVector3 pointTo;
@@ -300,6 +300,16 @@ struct VDEdge
 	bool operator!=(const VDEdge& other) const
 	{
 		return !(*this == other);
+	}
+
+	bool operator<(const VDEdge& other) const override
+	{
+		return distance < other.distance;
+	}
+
+	bool operator>(const VDEdge& other) const override
+	{
+		return distance > other.distance;
 	}
 };
 

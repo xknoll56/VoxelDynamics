@@ -489,6 +489,49 @@ void VDCollisionBoxImplicitPlaneEdgeTest(const VDOBB& box, const VDEdge& edge, c
 	}
 }
 
+bool VDCollisionBoxEdge(const VDOBB& box, const VDEdge& edge, VDManifold& manifold)
+{
+	VDEdge edges[12];
+	box.getEdges(edges);
+	VDList<VDEdge> validGaps(true);
+	for (int i = 0; i < 12; i++)
+	{
+		VDEdge& e = edges[i];
+		VDEdge edgeGap;
+		if (e.closestEdgeToEdgeNoClamp(edge, edgeGap))
+		{
+			if (box.isPointInOBB(edgeGap.pointTo, VD_COLLIDER_TOLERANCE) && edgeGap != e)
+			{
+				if (edgeGap.distance >= 0.0f)
+				{
+					validGaps.insertSorted(edgeGap);
+				}
+			}
+		}
+	}
+
+	if (validGaps.count == 0)
+		return false;
+
+	// The list is already sorted by distance
+	bool found = false;
+	VDEdge* first = &validGaps.pFirst->item;
+	VDEdge* second = (validGaps.pFirst->pNext != nullptr) ? &validGaps.pFirst->pNext->item : nullptr;
+	if (second && (second->distance - first->distance) <= VD_COLLIDER_TOLERANCE)
+	{
+		manifold.insertEdgeContact(*first);
+		manifold.insertEdgeContact(*second);
+		found = true;
+	}
+	else
+	{
+		manifold.insertEdgeContact(*first);
+		found = true;
+	}
+	
+	return found;
+}
+
 bool VDCollisionBoxImplicitPlane(const VDOBB& box, const VDImplicitPlane& plane, VDManifold& manifold, float skinWidth = 0.005f)
 {
 	VDDirection closestFaceDirection = VDVectorToFrameDirection(-plane.frame.up, box.frame);

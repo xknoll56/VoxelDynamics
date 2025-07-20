@@ -52,31 +52,42 @@ struct HellBoxScene : Scene
    //                 drawEdge(edgeGap, colorMagenta);
    //         }
    //     }
-        VDEdge edges[12];
-        box.getEdges(edges);
-		VDEdge smallestEdge = edges[0];
-        smallestEdge.distance = FLT_MAX;
-        for (int i = 0; i < 12; i++)
+  //      VDEdge edges[12];
+  //      box.getEdges(edges);
+		//VDEdge smallestEdge = edges[0];
+  //      smallestEdge.distance = FLT_MAX;
+  //      for (int i = 0; i < 12; i++)
+  //      {
+  //          VDEdge& e = edges[i];
+  //          VDEdge edgeGap;
+  //          if (e.closestEdgeToEdgeNoClamp(edge, edgeGap))
+  //          {
+  //              if (box.isPointInOBB(edgeGap.pointTo, VD_COLLIDER_TOLERANCE) && edgeGap!=e)
+  //              {
+  //                  if(edgeGap.distance < smallestEdge.distance)
+  //                  {
+  //                      smallestEdge = edgeGap;
+		//			}
+  //              }
+  //          }
+		//}
+  //      if (smallestEdge.distance >= 0.0f && smallestEdge.distance != FLT_MAX)
+  //      {
+  //          drawEdge(smallestEdge, colorMagenta);
+  //          drawPoint(smallestEdge.pointFrom, colorBlue);
+  //          drawPoint(smallestEdge.pointTo, colorGreen);
+  //      }
+		VDManifold manifold;
+        VDCollisionBoxEdge(box, edge, manifold);
+        for (VDuint i = 0; i < manifold.count; i++)
         {
-            VDEdge& e = edges[i];
-            VDEdge edgeGap;
-            if (e.closestEdgeToEdgeNoClamp(edge, edgeGap))
+            const VDContactInfo& info = manifold.infos[i];
+            if (info.type == VDContactType::EDGE)
             {
-                if (box.isPointInOBB(edgeGap.pointTo, 0.0005f) && edgeGap!=e)
-                {
-                    if(edgeGap.distance < smallestEdge.distance)
-                    {
-                        smallestEdge = edgeGap;
-					}
-                }
+                drawEdge(VDEdge(info.point, info.point + info.normal * 0.1f), colorMagenta);
+                drawPoint(info.point, colorBlue);
             }
 		}
-        if (smallestEdge.distance > 0.0f && smallestEdge.distance != FLT_MAX)
-        {
-            drawEdge(smallestEdge, colorMagenta);
-            drawPoint(smallestEdge.pointFrom, colorBlue);
-            drawPoint(smallestEdge.pointTo, colorGreen);
-        }
     }
 
     void draw(float dt) override
