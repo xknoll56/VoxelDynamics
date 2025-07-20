@@ -829,6 +829,11 @@ void drawTranslatedBox(VDVector3 translation, VDVector3 color, VDVector3 scale =
     drawTranslatedVertexBuffer(vbOrigin, translation, color, scale);
 }
 
+void drawPoint(VDVector3 point, VDVector3 color, float size = 0.1f)
+{
+	drawTranslatedBox(point, color, VDVector3(size, size, size));
+}
+
 void drawVertexBuffer(const VertexBuffer& vertexBuffer, VDVector3 translation, VDVector3 euler, VDVector3 scale, VDVector3 color, GLenum mode = GL_TRIANGLES)
 {
     shader.use();

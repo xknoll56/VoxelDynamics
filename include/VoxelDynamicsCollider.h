@@ -290,6 +290,17 @@ struct VDEdge
 		distance = dp.length();
 		dir = dp * (1.0f / distance);
 	}
+
+	// Equality operator: edges are equal if their endpoints are equal (order matters)
+	bool operator==(const VDEdge& other) const
+	{
+		return pointFrom == other.pointFrom && pointTo == other.pointTo;
+	}
+
+	bool operator!=(const VDEdge& other) const
+	{
+		return !(*this == other);
+	}
 };
 
 
@@ -856,6 +867,41 @@ struct VDOBB : VDAABB
 		VDVector3 dists = VDAbs(frame.localPosition(point, position));
 		return (dists.x <= halfExtents.x && dists.y <= halfExtents.y && dists.z <= halfExtents.z);
 	}
+
+    // Returns all 12 edges of the OBB using the current vertices
+    void getEdges(VDEdge (&edges)[12]) const
+    {
+        // Ensure vertices are up to date
+        const_cast<VDOBB*>(this)->usingVertices();
+
+        // Indices for the 8 vertices (see setVertices for mapping)
+        // 0: LEFT_DOWN_BACK
+        // 1: RIGHT_DOWN_BACK
+        // 2: LEFT_DOWN_FORWARD
+        // 3: RIGHT_DOWN_FORWARD
+        // 4: LEFT_UP_BACK
+        // 5: RIGHT_UP_BACK
+        // 6: LEFT_UP_FORWARD
+        // 7: RIGHT_UP_FORWARD
+
+        // Bottom face (y = -)
+        edges[0] = VDEdge(vertices[VDOctant::LEFT_DOWN_BACK],    vertices[VDOctant::RIGHT_DOWN_BACK]);    // back edge
+        edges[1] = VDEdge(vertices[VDOctant::RIGHT_DOWN_BACK],  vertices[VDOctant::RIGHT_DOWN_FORWARD]); // right edge
+        edges[2] = VDEdge(vertices[VDOctant::RIGHT_DOWN_FORWARD], vertices[VDOctant::LEFT_DOWN_FORWARD]); // front edge
+        edges[3] = VDEdge(vertices[VDOctant::LEFT_DOWN_FORWARD], vertices[VDOctant::LEFT_DOWN_BACK]);    // left edge
+
+        // Top face (y = +)
+        edges[4] = VDEdge(vertices[VDOctant::LEFT_UP_BACK],     vertices[VDOctant::RIGHT_UP_BACK]);      // back edge
+        edges[5] = VDEdge(vertices[VDOctant::RIGHT_UP_BACK],   vertices[VDOctant::RIGHT_UP_FORWARD]);   // right edge
+        edges[6] = VDEdge(vertices[VDOctant::RIGHT_UP_FORWARD], vertices[VDOctant::LEFT_UP_FORWARD]);   // front edge
+        edges[7] = VDEdge(vertices[VDOctant::LEFT_UP_FORWARD], vertices[VDOctant::LEFT_UP_BACK]);       // left edge
+
+        // Vertical edges
+        edges[8]  = VDEdge(vertices[VDOctant::LEFT_DOWN_BACK],    vertices[VDOctant::LEFT_UP_BACK]);    // left back
+        edges[9]  = VDEdge(vertices[VDOctant::RIGHT_DOWN_BACK],   vertices[VDOctant::RIGHT_UP_BACK]);   // right back
+        edges[10] = VDEdge(vertices[VDOctant::LEFT_DOWN_FORWARD], vertices[VDOctant::LEFT_UP_FORWARD]); // left front
+        edges[11] = VDEdge(vertices[VDOctant::RIGHT_DOWN_FORWARD],vertices[VDOctant::RIGHT_UP_FORWARD]);// right front
+    }
 };
 
 struct VDCollider : VDAABB

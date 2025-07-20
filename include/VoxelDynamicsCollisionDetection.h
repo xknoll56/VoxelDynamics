@@ -45,6 +45,7 @@ struct VDContactInfo
 	float distance;
 	VDVector3 point;
 	VDContactType type;
+	VDDirection dir;
 
 	VDContactInfo()
 	{
@@ -437,7 +438,7 @@ bool VDRayCastAABB(VDVector3 from, VDVector3 dir, const VDAABB& aabb, VDContactI
 	return false;
 }
 
-bool VDRayCastOBB(VDVector3 from, VDVector3 dir, const VDOBB& obb, VDContactInfo& contactInfo)
+bool VDRayCastOBB(VDVector3 from, VDVector3 dir, const VDOBB& obb, VDContactInfo& contactInfo, VDImplicitPlane& surface = VDImplicitPlane())
 {
 	if (obb.isPointInOBB(from))
 	{
@@ -449,14 +450,14 @@ bool VDRayCastOBB(VDVector3 from, VDVector3 dir, const VDOBB& obb, VDContactInfo
 	if (dot >= 0.0f)
 	{
 		VDVector3 localDirection = obb.frame.localDirection(dir);
-		VDImplicitPlane xPlane = localDirection.x > 0.0f ? obb.directionToImplicitPlane(VDDirection::LEFT) : obb.directionToImplicitPlane(VDDirection::RIGHT);
-		if (VDRayCastImplicitPlane(from, dir, xPlane, contactInfo))
+		surface = localDirection.x > 0.0f ? obb.directionToImplicitPlane(VDDirection::LEFT) : obb.directionToImplicitPlane(VDDirection::RIGHT);
+		if (VDRayCastImplicitPlane(from, dir, surface, contactInfo))
 			return true;
-		VDImplicitPlane yPlane = localDirection.y > 0.0f ? obb.directionToImplicitPlane(VDDirection::DOWN) : obb.directionToImplicitPlane(VDDirection::UP);
-		if (VDRayCastImplicitPlane(from, dir, yPlane, contactInfo))
+		surface = localDirection.y > 0.0f ? obb.directionToImplicitPlane(VDDirection::DOWN) : obb.directionToImplicitPlane(VDDirection::UP);
+		if (VDRayCastImplicitPlane(from, dir, surface, contactInfo))
 			return true;
-		VDImplicitPlane zPlane = localDirection.z > 0.0f ? obb.directionToImplicitPlane(VDDirection::BACK) : obb.directionToImplicitPlane(VDDirection::FORWARD);
-		if (VDRayCastImplicitPlane(from, dir, zPlane, contactInfo))
+		surface = localDirection.z > 0.0f ? obb.directionToImplicitPlane(VDDirection::BACK) : obb.directionToImplicitPlane(VDDirection::FORWARD);
+		if (VDRayCastImplicitPlane(from, dir, surface, contactInfo))
 			return true;
 	}
 	return false;
