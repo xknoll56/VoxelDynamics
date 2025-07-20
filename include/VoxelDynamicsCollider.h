@@ -862,10 +862,10 @@ struct VDOBB : VDAABB
 		}
 	}
 
-	bool isPointInOBB(const VDVector3& point) const
+	bool isPointInOBB(const VDVector3& point, float epsilon = 0.0f) const
 	{
 		VDVector3 dists = VDAbs(frame.localPosition(point, position));
-		return (dists.x <= halfExtents.x && dists.y <= halfExtents.y && dists.z <= halfExtents.z);
+		return (dists.x <= halfExtents.x + epsilon && dists.y <= halfExtents.y + epsilon && dists.z <= halfExtents.z + epsilon);
 	}
 
     // Returns all 12 edges of the OBB using the current vertices

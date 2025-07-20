@@ -11,7 +11,7 @@ struct HellBoxScene : Scene
     void init() override
     {
         box.setHalfExtents(VDVector3(0.5, 1, 1.5));
-		edge = VDEdge(VDVector3(-2,-1, -2), VDVector3(2, 2, 2));
+        edge = VDEdge(VDVector3(-2, 0.9, 0), VDVector3(2, 0.9, 0));
     }
 
     void update(float dt) override
@@ -62,7 +62,7 @@ struct HellBoxScene : Scene
             VDEdge edgeGap;
             if (e.closestEdgeToEdgeNoClamp(edge, edgeGap))
             {
-                if (box.isPointInOBB(edgeGap.pointTo) && edgeGap!=e)
+                if (box.isPointInOBB(edgeGap.pointTo, 0.0005f) && edgeGap!=e)
                 {
                     if(edgeGap.distance < smallestEdge.distance)
                     {
