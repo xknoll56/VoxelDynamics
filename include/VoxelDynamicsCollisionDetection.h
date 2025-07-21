@@ -659,15 +659,23 @@ bool VDCollisionBoxEdge(const VDOBB& box, const VDEdge& edge, VDManifold& manifo
 
 bool VDCollisionBoxImplicitPlane(const VDOBB& box, const VDImplicitPlane& plane, VDManifold& manifold, float skinWidth = 0.005f, float manfoldCombinationFactor = 0.95f)
 {
-	VDDirection closestFaceDirection = VDVectorToFrameDirection(-plane.frame.up, box.frame);
-	VDVector3 closestFaceVector = VDDirectionToFrameVector(closestFaceDirection, box.frame);
-	VDImplicitPlane face = box.directionToImplicitPlane(closestFaceDirection);
+	//First identify the closest face of the box to the plane
+	VDVector3 dp = plane.center - box.position;
+	VDVector3 planeNormal = plane.frame.up;
+	if (VDDot(dp, planeNormal) < 0.0f)
+	{
+		planeNormal = -planeNormal; // Ensure inward direction is correct
+	}
+	VDDirection boxFaceDir = VDVectorToFrameDirection(planeNormal, box.frame);
+	VDImplicitPlane face = box.directionToImplicitPlane(boxFaceDir);
 	VDVector3 faceVerts[4];
 	face.extractVerts(faceVerts);
+
+	// With the face identified, we can now check for contacts
 	for (int i = 0; i < 4; i++)
 	{
 		VDContactInfo ci;
-		if (VDRayCastImplicitPlane(faceVerts[i] + closestFaceVector * (-skinWidth), plane.frame.up, plane, ci))
+		if (VDRayCastImplicitPlane(faceVerts[i] + planeNormal * (-skinWidth), -planeNormal, plane, ci))
 		{
 			ci.normal = -ci.normal;
 			ci.distance -= skinWidth;
@@ -676,8 +684,21 @@ bool VDCollisionBoxImplicitPlane(const VDOBB& box, const VDImplicitPlane& plane,
 		}
 	}
 
-	// check for edge collisions
+	// Check the plane vertices for contacts
 	VDManifold testManfold;
+	for (int i = 0; i < 4; i++)
+	{
+		VDContactInfo ci;
+		if (VDRayCastImplicitPlane(plane.getVertexByIndex(i), planeNormal, face, ci))
+		{
+			ci.point = plane.getVertexByIndex(i) + planeNormal*ci.distance;
+			testManfold.insertContact(ci);
+		}
+	}
+	manifold.combineOrSwapIfSimilar(testManfold, manfoldCombinationFactor);
+
+	// check for edge collisions
+	testManfold = VDManifold(); // Reset test manifold for next edge
 	VDCollisionBoxEdge(box, plane.getEdgeByDirection(VDDirection::RIGHT), testManfold);
 	manifold.combineOrSwapIfSimilar(testManfold, manfoldCombinationFactor);
 	testManfold = VDManifold(); // Reset test manifold for next edge

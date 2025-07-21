@@ -17,6 +17,7 @@ struct HellBoxScene : Scene
         edge = VDEdge(VDVector3(-0.5,-0.5,-0.5), VDVector3(2, 1, 2));
         t = 0.0f; 
 		plane = VDImplicitPlane(VDVector3(0, 0, 0), VDVector3(0, 1, 0), 5.0f, 5.0f, 0.5f);
+		//plane = VDImplicitPlane(VDVector3(0, 0, 0), VDVector3(0, 1, 0), 0.25f, 0.25f, 0.5f);
     }
 
     void update(float dt) override
@@ -54,6 +55,19 @@ struct HellBoxScene : Scene
 			}
         }
 
+        //VDVector3 dp = plane.center - box.position;
+        //VDVector3 inward = plane.frame.up;
+        //if (VDDot(dp, inward) < 0.0f)
+        //{
+        //    inward = -inward; // Ensure inward direction is correct
+        //}
+
+        //VDDirection boxInwardDir = VDVectorToFrameDirection(inward, box.frame);
+        //VDImplicitPlane inwawrdPlane = box.directionToImplicitPlane(boxInwardDir);
+        VDDirection closestFaceDirection = VDVectorToFrameDirection(-plane.frame.up, box.frame);
+        VDVector3 closestFaceVector = VDDirectionToFrameVector(closestFaceDirection, box.frame);
+        VDImplicitPlane face = box.directionToImplicitPlane(closestFaceDirection);
+		drawPoint(face.center, colorGreen);
 
     }
 
