@@ -248,6 +248,36 @@ struct VDManifold
 		deepestPenetration = 0.0f;
 	}
 
+	// Copy constructor
+	VDManifold(const VDManifold& otherManifold)
+	{
+		other = otherManifold.other;
+		deepestPenetrationIndex = otherManifold.deepestPenetrationIndex;
+		count = otherManifold.count;
+		deepestPenetration = otherManifold.deepestPenetration;
+		for (VDuint i = 0; i < 8; ++i)
+		{
+			infos[i] = otherManifold.infos[i];
+		}
+	}
+
+	// Assignment operator
+	VDManifold& operator=(const VDManifold& otherManifold)
+	{
+		if (this != &otherManifold)
+		{
+			other = otherManifold.other;
+			deepestPenetrationIndex = otherManifold.deepestPenetrationIndex;
+			count = otherManifold.count;
+			deepestPenetration = otherManifold.deepestPenetration;
+			for (VDuint i = 0; i < 8; ++i)
+			{
+				infos[i] = otherManifold.infos[i];
+			}
+		}
+		return *this;
+	}
+
 	void insertContact(const VDContactInfo info)
 	{
 		if (count < 8)
@@ -264,6 +294,44 @@ struct VDManifold
 	void insertEdgeContact(const VDEdge edge)
 	{
 		insertContact(VDContactInfo(edge.pointFrom, edge.dir, edge.distance, VDContactType::EDGE));
+	}
+
+	void combine(const VDManifold& other)
+	{
+		for (int i = 0; i < other.count; i++)
+		{
+			insertContact(other.infos[i]);
+		}
+	}
+
+	void combineOrSwapIfSimilar(const VDManifold& other, float similarityFactor = 0.95f)
+	{
+
+		// If one manifold is empty and another is not, use the non-empty manifold
+		if(count == 0 && other.count > 0)
+		{
+			*this = other;
+			return;
+		}
+		else if(other.count == 0 && count > 0)
+		{
+			return;
+		}
+
+		VDContactInfo deepestContact = infos[deepestPenetrationIndex];
+		VDContactInfo otherDeepestContact = other.infos[other.deepestPenetrationIndex];
+
+		float dotProduct = VDDot(deepestContact.normal, otherDeepestContact.normal);
+		if(dotProduct > similarityFactor)
+		{
+			// If the normals are similar, combine the manifolds
+			combine(other);
+		}
+		else if(otherDeepestContact.distance < deepestContact.distance)
+		{
+			// If the other manifold's deepest contact is deeper, replace this manifold because they are not similar
+			*this = other;
+		}
 	}
 
 
@@ -525,7 +593,8 @@ void VDAddPenetrateEdgePoint(const VDOBB& box, VDVector3 edgePoint, VDVector3 di
         if (contact.distance < FLT_MAX && contact.distance > 0)
         {
             VDEdge penetrationEdge(contact.point, edgePoint);
-			validGaps.insertSorted(penetrationEdge);
+			if(VDDot(penetrationEdge.dir, planeInward)>=0.0f)
+				validGaps.insertSorted(penetrationEdge);
         }
     }
 }
@@ -556,7 +625,7 @@ bool VDCollisionBoxEdge(const VDOBB& box, const VDEdge& edge, VDManifold& manifo
 		{
 			if (box.isPointInOBB(edgeGap.pointTo, VD_COLLIDER_TOLERANCE) && edgeGap != e)
 			{
-				if (edgeGap.distance >= 0.0f)
+				if (edgeGap.distance >= 0.0f && VDDot(edgeGap.dir, edge.planeInward)>=0.0f)
 				{
 					validGaps.insertSorted(edgeGap);
 				}
@@ -588,7 +657,7 @@ bool VDCollisionBoxEdge(const VDOBB& box, const VDEdge& edge, VDManifold& manifo
 	return found;
 }
 
-bool VDCollisionBoxImplicitPlane(const VDOBB& box, const VDImplicitPlane& plane, VDManifold& manifold, float skinWidth = 0.005f)
+bool VDCollisionBoxImplicitPlane(const VDOBB& box, const VDImplicitPlane& plane, VDManifold& manifold, float skinWidth = 0.005f, float manfoldCombinationFactor = 0.95f)
 {
 	VDDirection closestFaceDirection = VDVectorToFrameDirection(-plane.frame.up, box.frame);
 	VDVector3 closestFaceVector = VDDirectionToFrameVector(closestFaceDirection, box.frame);
@@ -608,10 +677,19 @@ bool VDCollisionBoxImplicitPlane(const VDOBB& box, const VDImplicitPlane& plane,
 	}
 
 	// check for edge collisions
-	VDCollisionBoxEdge(box, plane.getEdgeByDirection(VDDirection::RIGHT), manifold);
-	VDCollisionBoxEdge(box, plane.getEdgeByDirection(VDDirection::LEFT), manifold);
-	VDCollisionBoxEdge(box, plane.getEdgeByDirection(VDDirection::FORWARD), manifold);
-	VDCollisionBoxEdge(box, plane.getEdgeByDirection(VDDirection::BACK), manifold);
+	VDManifold testManfold;
+	VDCollisionBoxEdge(box, plane.getEdgeByDirection(VDDirection::RIGHT), testManfold);
+	manifold.combineOrSwapIfSimilar(testManfold, manfoldCombinationFactor);
+	testManfold = VDManifold(); // Reset test manifold for next edge
+	VDCollisionBoxEdge(box, plane.getEdgeByDirection(VDDirection::LEFT), testManfold);
+	manifold.combineOrSwapIfSimilar(testManfold, manfoldCombinationFactor);
+	testManfold = VDManifold(); // Reset test manifold for next edge
+	VDCollisionBoxEdge(box, plane.getEdgeByDirection(VDDirection::FORWARD), testManfold);
+	manifold.combineOrSwapIfSimilar(testManfold, manfoldCombinationFactor);
+	testManfold = VDManifold(); // Reset test manifold for next edge
+	VDCollisionBoxEdge(box, plane.getEdgeByDirection(VDDirection::BACK), testManfold);
+	manifold.combineOrSwapIfSimilar(testManfold, manfoldCombinationFactor);
+
 
 	return manifold.count > 0;
 }
