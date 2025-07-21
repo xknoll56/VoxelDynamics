@@ -25,10 +25,10 @@ struct HellBoxScene : Scene
         Scene::update(dt);
         if (keys[GLFW_KEY_E])
         {
-            t += dt;
+		    box.rotate(VDQuaternion::fromAngleAxis(VDVector3(0.3, 1, 0.6), dt * 0.5f));
         }
 		movePositionWithArrows(camera, box.position, dt, 2.0f);
-		box.setRotation(VDQuaternion::fromAngleAxis(VDVector3(1, 1, 1), t));
+        box.setVertices();
 
 		VDManifold manifold;
         if(VDCollisionBoxImplicitPlane(box, plane, manifold))
@@ -49,7 +49,7 @@ struct HellBoxScene : Scene
         {
             if(manifold.count > 0)
             {
-                const VDContactInfo& info = manifold.infos[0];
+                const VDContactInfo& info = manifold.infos[manifold.deepestPenetrationIndex];
                 box.translate(info.normal * info.distance);
 				std::cout << "Box moved by " << info.distance << " in direction " << info.normal.x <<"," <<info.normal.y << "," << info.normal.z << std::endl;
 			}
