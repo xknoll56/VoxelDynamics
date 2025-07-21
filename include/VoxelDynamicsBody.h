@@ -3,7 +3,7 @@
 
 #include "VoxelDynamicsCollider.h"
 
-struct VDBody : VDCollider
+struct VDBodyBase
 {
 	float mass;
 	VDVector3 velocity;
@@ -16,8 +16,7 @@ struct VDBody : VDCollider
 	bool useGravity;
 
 
-	VDBody() :
-		VDCollider(VDAABB())
+	VDBodyBase()
 	{
 		mass = 1.0f;
 		restitution = 0.5f;
@@ -29,18 +28,7 @@ struct VDBody : VDCollider
 		deltaMomentums = VDList<VDVector3>();
 	}
 
-	VDBody(VDVector3 position, VDVector3 halfExtents, float mass) :
-		VDCollider(VDAABB::fromMidPointAndHalfExtents(halfExtents, position))
-	{
-		this->mass = mass;
-		restitution = 0.5f;
-		friction = 0.5f;
-		sleeping = false;
-		useGravity = true;
-		this->velocity = VDVector3();
-		forces = VDList<VDVector3>();
-		deltaMomentums = VDList<VDVector3>();
-	}
+
 
 	void applyDeltaMomentums()
 	{
@@ -90,8 +78,34 @@ struct VDBody : VDCollider
 			applyDeltaMomentums();
 			applyForces(dt);
 			velocity = momentum * (1.0f / mass);
-			translate(velocity * dt);
 		}
+	}
+};
+struct VDBody : VDCollider, VDBodyBase
+{
+
+	VDBody() :
+		VDBodyBase(), VDCollider(VDAABB()) {
+
+	}
+	VDBody(VDVector3 position, VDVector3 halfExtents, float mass) :
+		VDCollider(VDAABB::fromMidPointAndHalfExtents(halfExtents, position))
+	{
+		this->mass = mass;
+		restitution = 0.5f;
+		friction = 0.5f;
+		sleeping = false;
+		useGravity = true;
+		this->velocity = VDVector3();
+		forces = VDList<VDVector3>();
+		deltaMomentums = VDList<VDVector3>();
+	}
+
+	void simulate(float dt) override
+	{
+		VDBodyBase::simulate(dt);
+		if(!sleeping)
+			translate(velocity * dt);
 	}
 };
 
