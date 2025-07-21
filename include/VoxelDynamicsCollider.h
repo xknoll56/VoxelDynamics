@@ -200,11 +200,15 @@ struct VDEdge : IVDSortable<VDEdge>
 	VDVector3 dir;
 	float distance;
 
+	// The direction of the edge in the plane lies on
+	VDVector3 planeInward;
+
 	VDEdge()
 	{
 		pointFrom = VDVector3::zero();
 		pointTo = VDVector3::right();
 		setDirection();
+		planeInward = VDVector3::zero();
 	}
 
 	VDEdge(VDVector3 _point1, VDVector3 _point2)
@@ -212,6 +216,7 @@ struct VDEdge : IVDSortable<VDEdge>
 		pointFrom = _point1;
 		pointTo = _point2;
 		setDirection();
+		planeInward = VDVector3::zero();
 	}
 
 	VDEdge(VDVector3 _pointFrom, VDVector3 _dir, float _distance)
@@ -220,14 +225,16 @@ struct VDEdge : IVDSortable<VDEdge>
 		dir = _dir;
 		distance = _distance;
 		pointTo = pointFrom + distance * dir;
+		planeInward = VDVector3::zero();
 	}
 
-	VDEdge(VDVector3 _pointFrom, VDVector3 _pointTo, VDVector3 _dir, float _distance)
+	VDEdge(VDVector3 _pointFrom, VDVector3 _pointTo, VDVector3 _dir, float _distance, VDVector3 _planeInward = VDVector3::zero())
 	{
 		pointFrom = _pointFrom;
 		pointTo = _pointTo;
 		dir = _dir;
 		distance = _distance;
+		planeInward = _planeInward;
 	}
 
 	VDEdge closestEdgeToPoint(VDVector3 point) const
@@ -446,19 +453,23 @@ struct VDImplicitPlane
 		{
 		case VDDirection::RIGHT:
 			return VDEdge(getVertexByDirections(VDDirection::RIGHT, VDDirection::BACK),
-				getVertexByDirections(VDDirection::RIGHT, VDDirection::FORWARD), frame.forward, 2.0f * forwardHalfSize);
+				getVertexByDirections(VDDirection::RIGHT, VDDirection::FORWARD), frame.forward, 2.0f * forwardHalfSize,
+				frame.right);
 			break;
 		case VDDirection::LEFT:
 			return VDEdge(getVertexByDirections(VDDirection::LEFT, VDDirection::BACK),
-				getVertexByDirections(VDDirection::LEFT, VDDirection::FORWARD), frame.forward, 2.0f * forwardHalfSize);
+				getVertexByDirections(VDDirection::LEFT, VDDirection::FORWARD), frame.forward, 2.0f * forwardHalfSize,
+				-frame.right);
 			break;
 		case VDDirection::FORWARD:
 			return VDEdge(getVertexByDirections(VDDirection::LEFT, VDDirection::FORWARD),
-				getVertexByDirections(VDDirection::RIGHT, VDDirection::FORWARD), frame.right, 2.0f * rightHalfSize);
+				getVertexByDirections(VDDirection::RIGHT, VDDirection::FORWARD), frame.right, 2.0f * rightHalfSize,
+				frame.forward);
 			break;
 		case VDDirection::BACK:
 			return VDEdge(getVertexByDirections(VDDirection::LEFT, VDDirection::BACK),
-				getVertexByDirections(VDDirection::RIGHT, VDDirection::BACK), frame.right, 2.0f * rightHalfSize);
+				getVertexByDirections(VDDirection::RIGHT, VDDirection::BACK), frame.right, 2.0f * rightHalfSize,
+				-frame.forward);
 			break;
 		}
 		return VDEdge();

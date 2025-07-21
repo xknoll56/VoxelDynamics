@@ -438,7 +438,7 @@ bool VDRayCastAABB(VDVector3 from, VDVector3 dir, const VDAABB& aabb, VDContactI
 	return false;
 }
 
-bool VDRayCastOBB(VDVector3 from, VDVector3 dir, const VDOBB& obb, VDContactInfo& contactInfo, VDImplicitPlane& surface = VDImplicitPlane())
+bool VDRayCastOBB(VDVector3 from, VDVector3 dir, const VDOBB& obb, VDContactInfo& contactInfo, VDImplicitPlane& surface = VDImplicitPlane(), float distance = FLT_MAX)
 {
 	if (obb.isPointInOBB(from))
 	{
@@ -451,13 +451,13 @@ bool VDRayCastOBB(VDVector3 from, VDVector3 dir, const VDOBB& obb, VDContactInfo
 	{
 		VDVector3 localDirection = obb.frame.localDirection(dir);
 		surface = localDirection.x > 0.0f ? obb.directionToImplicitPlane(VDDirection::LEFT) : obb.directionToImplicitPlane(VDDirection::RIGHT);
-		if (VDRayCastImplicitPlane(from, dir, surface, contactInfo))
+		if (VDRayCastImplicitPlane(from, dir, surface, contactInfo) && contactInfo.distance <= distance)
 			return true;
 		surface = localDirection.y > 0.0f ? obb.directionToImplicitPlane(VDDirection::DOWN) : obb.directionToImplicitPlane(VDDirection::UP);
-		if (VDRayCastImplicitPlane(from, dir, surface, contactInfo))
+		if (VDRayCastImplicitPlane(from, dir, surface, contactInfo) && contactInfo.distance <= distance)
 			return true;
 		surface = localDirection.z > 0.0f ? obb.directionToImplicitPlane(VDDirection::BACK) : obb.directionToImplicitPlane(VDDirection::FORWARD);
-		if (VDRayCastImplicitPlane(from, dir, surface, contactInfo))
+		if (VDRayCastImplicitPlane(from, dir, surface, contactInfo) && contactInfo.distance <= distance)
 			return true;
 	}
 	return false;
@@ -489,7 +489,7 @@ void VDCollisionBoxImplicitPlaneEdgeTest(const VDOBB& box, const VDEdge& edge, c
 	}
 }
 
-void VDAddPenetrateEdgePoint(const VDOBB& box, VDVector3 edgePoint, VDVector3 dir, VDList<VDEdge>& validGaps)
+void VDAddPenetrateEdgePoint(const VDOBB& box, VDVector3 edgePoint, VDVector3 dir, VDVector3 planeInward, VDList<VDEdge>& validGaps)
 {
     if (box.isPointInOBB(edgePoint))
     {
@@ -505,19 +505,19 @@ void VDAddPenetrateEdgePoint(const VDOBB& box, VDVector3 edgePoint, VDVector3 di
         // Only raycast if direction is nonzero
         if (fabs(localDir.x) > VD_COLLIDER_TOLERANCE)
         {
-            VDRayCastImplicitPlane(edgePoint, box.frame.right * VDSign(localDir.x), rightPlane, contactTest);
+			VDRayCastPlane(edgePoint, box.frame.right * VDSign(localDir.x), rightPlane.normal(), rightPlane.center, contactTest);
             if (contactTest.distance < contact.distance)
                 contact = contactTest;
         }
         if (fabs(localDir.y) > VD_COLLIDER_TOLERANCE)
         {
-            VDRayCastImplicitPlane(edgePoint, box.frame.up * VDSign(localDir.y), upPlane, contactTest);
+			VDRayCastPlane(edgePoint, box.frame.up * VDSign(localDir.y), upPlane.normal(), upPlane.center, contactTest);
             if (contactTest.distance < contact.distance)
                 contact = contactTest;
         }
         if (fabs(localDir.z) > VD_COLLIDER_TOLERANCE)
         {
-            VDRayCastImplicitPlane(edgePoint, box.frame.forward * VDSign(localDir.z), forwardPlane, contactTest);
+			VDRayCastPlane(edgePoint, box.frame.forward * VDSign(localDir.z), forwardPlane.normal(), forwardPlane.center, contactTest);
             if (contactTest.distance < contact.distance)
                 contact = contactTest;
         }
@@ -525,17 +525,27 @@ void VDAddPenetrateEdgePoint(const VDOBB& box, VDVector3 edgePoint, VDVector3 di
         if (contact.distance < FLT_MAX && contact.distance > 0)
         {
             VDEdge penetrationEdge(contact.point, edgePoint);
-            validGaps.insertSorted(penetrationEdge);
+			validGaps.insertSorted(penetrationEdge);
         }
     }
 }
 
 bool VDCollisionBoxEdge(const VDOBB& box, const VDEdge& edge, VDManifold& manifold)
 {
-	// First check the edge point gaps
+	VDContactInfo contactInfo;
+
+	//  The edge must intersect the box
+	if(!VDRayCastOBB(edge.pointFrom, edge.dir, box, contactInfo, VDImplicitPlane(), edge.distance))
+	{
+		return false;
+	}
 	VDList<VDEdge> validGaps(true);
-	VDAddPenetrateEdgePoint(box, edge.pointFrom, edge.dir, validGaps);
-	VDAddPenetrateEdgePoint(box, edge.pointTo, -edge.dir, validGaps);
+
+	// First check the edge points if either of them is inside the box
+	VDAddPenetrateEdgePoint(box, edge.pointFrom, edge.dir, edge.planeInward, validGaps);
+	VDAddPenetrateEdgePoint(box, edge.pointTo, -edge.dir, edge.planeInward, validGaps);
+
+	// Now check the edges of the box
 	VDEdge edges[12];
 	box.getEdges(edges);
 	for (int i = 0; i < 12; i++)
@@ -561,6 +571,8 @@ bool VDCollisionBoxEdge(const VDOBB& box, const VDEdge& edge, VDManifold& manifo
 	bool found = false;
 	VDEdge* first = &validGaps.pFirst->item;
 	VDEdge* second = (validGaps.pFirst->pNext != nullptr) ? &validGaps.pFirst->pNext->item : nullptr;
+
+	//If two edges are close enough, we can consider them both as contacts
 	if (second && (second->distance - first->distance) <= VD_COLLIDER_TOLERANCE)
 	{
 		manifold.insertEdgeContact(*first);
@@ -590,35 +602,18 @@ bool VDCollisionBoxImplicitPlane(const VDOBB& box, const VDImplicitPlane& plane,
 		{
 			ci.normal = -ci.normal;
 			ci.distance -= skinWidth;
+			ci.point = faceVerts[i];
 			manifold.insertContact(ci);
 		}
 	}
 
-	VDVector3 dp = plane.center - box.position;
-	VDVector3 inward = VDTangentialComponent(dp, plane.frame.up);
-	VDDirection inwardDir = VDVectorToFrameDirection(inward, box.frame);
-	VDImplicitPlane inwardFace = box.directionToImplicitPlane(inwardDir);
+	// check for edge collisions
+	VDCollisionBoxEdge(box, plane.getEdgeByDirection(VDDirection::RIGHT), manifold);
+	VDCollisionBoxEdge(box, plane.getEdgeByDirection(VDDirection::LEFT), manifold);
+	VDCollisionBoxEdge(box, plane.getEdgeByDirection(VDDirection::FORWARD), manifold);
+	VDCollisionBoxEdge(box, plane.getEdgeByDirection(VDDirection::BACK), manifold);
 
-	VDDirection edgeDirs[] = { VDDirection::RIGHT, VDDirection::LEFT, VDDirection::FORWARD, VDDirection::BACK };
-	if (VDDot(face.frame.up, inward) >= 0.0f)
-	{
-		for (int i = 0; i < 4; i++)
-		{
-			VDEdge edge = face.getEdgeByDirection(edgeDirs[i]);
-			VDCollisionBoxImplicitPlaneEdgeTest(box, edge, plane, manifold);
-		}
-	}
-	else
-	{
-		for (int i = 0; i < 4; i++)
-		{
-			VDEdge edge = inwardFace.getEdgeByDirection(edgeDirs[i]);
-			VDCollisionBoxImplicitPlaneEdgeTest(box, edge, plane, manifold);
-		}
-	}
-
-
-	return true;
+	return manifold.count > 0;
 }
 
 
