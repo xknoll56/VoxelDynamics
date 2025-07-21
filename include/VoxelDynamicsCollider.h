@@ -252,7 +252,12 @@ struct VDEdge : IVDSortable<VDEdge>
 		float s = VDDot(VDCross(edge.pointFrom - pointFrom, dir), cross) / crossLength2;
 		t = VDClamp(t, 0.0f, distance);
 		s = VDClamp(s, 0.0f, edge.distance);
-		return VDEdge(pointFrom + dir * t, edge.pointFrom + edge.dir * s);
+		VDVector3 _pointFrom = pointFrom + dir * t;
+		VDVector3 _pointTo = edge.pointFrom + edge.dir * s;
+		VDVector3 dp = _pointTo - _pointFrom;
+		cross.normalize();
+		VDVector3 dir = cross * VDSign(VDDot(dp, cross));
+		return VDEdge(_pointFrom, _pointTo, dir, dp.length());
 	}
 
 	bool closestEdgeToEdgeNoClamp(const VDEdge& edge, VDEdge& edgeGap) const
@@ -269,7 +274,13 @@ struct VDEdge : IVDSortable<VDEdge>
 			return false;
 		if (s<0.0f || s>edge.distance)
 			return false;
-		edgeGap = VDEdge(pointFrom + dir * t, edge.pointFrom + edge.dir * s);
+		// Sometimes the closest points are basically equal and we need to retain the direction of the edge
+		VDVector3 _pointFrom = pointFrom + dir * t;
+		VDVector3 _pointTo = edge.pointFrom + edge.dir * s;
+		VDVector3 dp = _pointTo - _pointFrom;
+		cross.normalize();
+		VDVector3 dir = cross * VDSign(VDDot(dp, cross));
+		edgeGap = VDEdge(_pointFrom, _pointTo, dir, dp.length());
 		return true;
 	}
 

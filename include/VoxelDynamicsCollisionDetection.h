@@ -489,11 +489,55 @@ void VDCollisionBoxImplicitPlaneEdgeTest(const VDOBB& box, const VDEdge& edge, c
 	}
 }
 
+void VDAddPenetrateEdgePoint(const VDOBB& box, VDVector3 edgePoint, VDVector3 dir, VDList<VDEdge>& validGaps)
+{
+    if (box.isPointInOBB(edgePoint))
+    {
+        VDVector3 localDir = box.frame.localDirection(dir);
+
+        VDImplicitPlane rightPlane = localDir.x >= 0.0f ? box.directionToImplicitPlane(VDDirection::RIGHT) : box.directionToImplicitPlane(VDDirection::LEFT);
+        VDImplicitPlane upPlane = localDir.y >= 0.0f ? box.directionToImplicitPlane(VDDirection::UP) : box.directionToImplicitPlane(VDDirection::DOWN);
+        VDImplicitPlane forwardPlane = localDir.z >= 0.0f ? box.directionToImplicitPlane(VDDirection::FORWARD) : box.directionToImplicitPlane(VDDirection::BACK);
+
+        VDContactInfo contact, contactTest;
+        contact.distance = FLT_MAX;
+
+        // Only raycast if direction is nonzero
+        if (fabs(localDir.x) > VD_COLLIDER_TOLERANCE)
+        {
+            VDRayCastImplicitPlane(edgePoint, box.frame.right * VDSign(localDir.x), rightPlane, contactTest);
+            if (contactTest.distance < contact.distance)
+                contact = contactTest;
+        }
+        if (fabs(localDir.y) > VD_COLLIDER_TOLERANCE)
+        {
+            VDRayCastImplicitPlane(edgePoint, box.frame.up * VDSign(localDir.y), upPlane, contactTest);
+            if (contactTest.distance < contact.distance)
+                contact = contactTest;
+        }
+        if (fabs(localDir.z) > VD_COLLIDER_TOLERANCE)
+        {
+            VDRayCastImplicitPlane(edgePoint, box.frame.forward * VDSign(localDir.z), forwardPlane, contactTest);
+            if (contactTest.distance < contact.distance)
+                contact = contactTest;
+        }
+
+        if (contact.distance < FLT_MAX && contact.distance > 0)
+        {
+            VDEdge penetrationEdge(contact.point, edgePoint);
+            validGaps.insertSorted(penetrationEdge);
+        }
+    }
+}
+
 bool VDCollisionBoxEdge(const VDOBB& box, const VDEdge& edge, VDManifold& manifold)
 {
+	// First check the edge point gaps
+	VDList<VDEdge> validGaps(true);
+	VDAddPenetrateEdgePoint(box, edge.pointFrom, edge.dir, validGaps);
+	VDAddPenetrateEdgePoint(box, edge.pointTo, -edge.dir, validGaps);
 	VDEdge edges[12];
 	box.getEdges(edges);
-	VDList<VDEdge> validGaps(true);
 	for (int i = 0; i < 12; i++)
 	{
 		VDEdge& e = edges[i];

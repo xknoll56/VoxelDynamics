@@ -7,76 +7,24 @@ struct HellBoxScene : Scene
 
     VDOBB box;
     VDEdge edge;
+    float t;
 
     void init() override
     {
         box.setHalfExtents(VDVector3(0.5, 1, 1.5));
-        edge = VDEdge(VDVector3(-2, 0.9, 0), VDVector3(2, 0.9, 0));
+        edge = VDEdge(VDVector3(-0.5,-0.5,-0.5), VDVector3(2, 1, 2));
+        t = 0.0f; 
     }
 
     void update(float dt) override
     {
         Scene::update(dt);
-        if(keys[GLFW_KEY_SPACE])
-		    box.setRotation(VDQuaternion::fromAngleAxis(VDVector3(0, 1, 0), elapsedTime));
+        if (keys[GLFW_KEY_E])
+        {
+            t += dt;
+        }
+		box.setRotation(VDQuaternion::fromAngleAxis(VDVector3(0, 1, 0), t));
 
-   //     VDContactInfo info;
-   //     VDImplicitPlane contactPlane;
-   //     if(VDRayCastOBB(edge.pointFrom, edge.dir, box, info, contactPlane))
-   //     {
-			//drawPoint(info.point, colorYellow);
-			//drawPoint(contactPlane.center, colorBlue);
-   //         VDEdge closest = contactPlane.closestEdgeToPoint(info.point);
-			//drawEdge(closest, colorGreen);
-   //         VDEdge edgeGap;
-   //         if(edge.closestEdgeToEdgeNoClamp(closest, edgeGap))
-   //         {
-   //             drawPoint(edgeGap.pointFrom, colorBlue);
-   //             drawPoint(edgeGap.pointTo, colorGreen);
-   //             if(box.isPointInOBB(edgeGap.pointFrom))
-   //                 drawEdge(edgeGap, colorMagenta);
-			//}
-   //     }
-   //     if (VDRayCastOBB(edge.pointTo, -edge.dir, box, info, contactPlane))
-   //     {
-   //         drawPoint(info.point, colorYellow);
-   //         drawPoint(contactPlane.center, colorBlue);
-   //         VDEdge closest = contactPlane.closestEdgeToPoint(info.point);
-   //         drawEdge(closest, colorGreen);
-   //         VDEdge edgeGap;
-   //         if (edge.closestEdgeToEdgeNoClamp(closest, edgeGap))
-   //         {
-   //             drawPoint(edgeGap.pointFrom, colorBlue);
-   //             drawPoint(edgeGap.pointTo, colorGreen);
-   //             if (box.isPointInOBB(edgeGap.pointFrom))
-   //                 drawEdge(edgeGap, colorMagenta);
-   //         }
-   //     }
-  //      VDEdge edges[12];
-  //      box.getEdges(edges);
-		//VDEdge smallestEdge = edges[0];
-  //      smallestEdge.distance = FLT_MAX;
-  //      for (int i = 0; i < 12; i++)
-  //      {
-  //          VDEdge& e = edges[i];
-  //          VDEdge edgeGap;
-  //          if (e.closestEdgeToEdgeNoClamp(edge, edgeGap))
-  //          {
-  //              if (box.isPointInOBB(edgeGap.pointTo, VD_COLLIDER_TOLERANCE) && edgeGap!=e)
-  //              {
-  //                  if(edgeGap.distance < smallestEdge.distance)
-  //                  {
-  //                      smallestEdge = edgeGap;
-		//			}
-  //              }
-  //          }
-		//}
-  //      if (smallestEdge.distance >= 0.0f && smallestEdge.distance != FLT_MAX)
-  //      {
-  //          drawEdge(smallestEdge, colorMagenta);
-  //          drawPoint(smallestEdge.pointFrom, colorBlue);
-  //          drawPoint(smallestEdge.pointTo, colorGreen);
-  //      }
 		VDManifold manifold;
         VDCollisionBoxEdge(box, edge, manifold);
         for (VDuint i = 0; i < manifold.count; i++)
@@ -84,10 +32,21 @@ struct HellBoxScene : Scene
             const VDContactInfo& info = manifold.infos[i];
             if (info.type == VDContactType::EDGE)
             {
-                drawEdge(VDEdge(info.point, info.point + info.normal * 0.1f), colorMagenta);
+                drawEdge(VDEdge(info.point, info.point + info.normal * info.distance), colorMagenta);
                 drawPoint(info.point, colorBlue);
             }
 		}
+        if (keysDown[GLFW_KEY_SPACE])
+        {
+            if(manifold.count > 0)
+            {
+                const VDContactInfo& info = manifold.infos[0];
+                box.translate(info.normal * info.distance);
+				std::cout << "Box moved by " << info.distance << " in direction " << info.normal.x <<"," <<info.normal.y << "," << info.normal.z << std::endl;
+			}
+        }
+
+
     }
 
     void draw(float dt) override
